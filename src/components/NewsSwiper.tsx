@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { usePreferences } from '@/hooks/usePreferences';
 
-const SWIPE_THRESHOLD = 0.22;    // 22% da altura da tela para confirmar slide
-const VELOCITY_THRESHOLD = 0.35; // px/ms — flick rápido também confirma
-const RUBBER_FACTOR = 0.12;      // resistência nas bordas (efeito elástico)
-const SNAP_EASING = 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+const SWIPE_THRESHOLD = 0.12;    // 12% da altura da tela (super responsivo)
+const VELOCITY_THRESHOLD = 0.18; // px/ms — flick leve já passa de notícia
+const RUBBER_FACTOR = 0.18;      // resistência nas bordas (efeito elástico agradável)
+const SNAP_EASING = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
+const SNAP_DURATION_MS = 290;
 const LOAD_MORE_THRESHOLD = 5;
 
 interface NewsSwiperProps {
@@ -37,6 +38,7 @@ export default function NewsSwiper({
   const viewportRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isTransitioning = useRef(false);
+  const transitionTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartY = useRef(0);
   const touchCurrentY = useRef(0);
   const touchStartTime = useRef(0);
@@ -70,7 +72,7 @@ export default function NewsSwiper({
     if (!wrapperRef.current) return;
     const y = -activeIndexRef.current * getVH() + extraOffset;
     wrapperRef.current.style.transition = animated ? SNAP_EASING : 'none';
-    wrapperRef.current.style.transform = `translateY(${y}px)`;
+    wrapperRef.current.style.transform = `translate3d(0, ${y}px, 0)`;
   }, []);
 
   const goToIndex = useCallback((newIndex: number) => {
@@ -79,23 +81,29 @@ export default function NewsSwiper({
     activeIndexRef.current = clamped;
     setActiveIndex(clamped);
     applyTransform(0, true);
-    setTimeout(() => { isTransitioning.current = false; }, 420);
+
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    transitionTimer.current = setTimeout(() => {
+      isTransitioning.current = false;
+    }, SNAP_DURATION_MS);
   }, [applyTransform]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (isTransitioning.current) return;
+    // Permite interrupção imediata ao tocar de novo (elimina a sensação de travado)
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    isTransitioning.current = false;
+    if (wrapperRef.current) wrapperRef.current.style.transition = 'none';
+
     touchStartY.current = e.touches[0].clientY;
     touchCurrentY.current = e.touches[0].clientY;
     touchStartTime.current = Date.now();
-    if (wrapperRef.current) wrapperRef.current.style.transition = 'none';
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (isTransitioning.current) return;
     touchCurrentY.current = e.touches[0].clientY;
     let delta = touchCurrentY.current - touchStartY.current;
 
-    // Resistência nas bordas: primeiro e último slide têm efeito elástico
+    // Resistência suave nas bordas (efeito elástico)
     const atTop = activeIndexRef.current === 0;
     const atBottom = activeIndexRef.current >= totalSlidesRef.current - 1;
     if ((atTop && delta > 0) || (atBottom && delta < 0)) {
@@ -106,7 +114,6 @@ export default function NewsSwiper({
   }, [applyTransform]);
 
   const handleTouchEnd = useCallback(() => {
-    if (isTransitioning.current) return;
     const delta = touchCurrentY.current - touchStartY.current;
     const elapsed = Math.max(Date.now() - touchStartTime.current, 1);
     const velocity = Math.abs(delta) / elapsed;
@@ -114,20 +121,40 @@ export default function NewsSwiper({
     const swipedEnough = Math.abs(delta) > vh * SWIPE_THRESHOLD;
     const fastEnough = velocity > VELOCITY_THRESHOLD;
 
-    // Sempre avança apenas 1 slide por gesto, independente da velocidade
+    // Sempre avança apenas 1 slide por gesto com resposta imediata
     if (delta < 0 && (swipedEnough || fastEnough)) {
       goToIndex(activeIndexRef.current + 1);
     } else if (delta > 0 && (swipedEnough || fastEnough)) {
       goToIndex(activeIndexRef.current - 1);
     } else {
-      applyTransform(0, true); // snap de volta com animação elástica
+      applyTransform(0, true); // snap de volta com animação suave
     }
   }, [applyTransform, goToIndex]);
 
-  // Resync transform quando artigos mudam (ex: novos artigos carregados)
+  // Resync transform quando artigos mudam
   useEffect(() => {
     applyTransform(0, false);
   }, [articles, applyTransform]);
+
+  // Blindagem ao alternar abas ou redimensionar (volta sem bug de alinhamento)
+  useEffect(() => {
+    const handleRealign = () => {
+      if (document.hidden) return;
+      isTransitioning.current = false;
+      applyTransform(0, false);
+    };
+
+    window.addEventListener('resize', handleRealign, { passive: true });
+    window.addEventListener('orientationchange', handleRealign, { passive: true });
+    document.addEventListener('visibilitychange', handleRealign);
+
+    return () => {
+      window.removeEventListener('resize', handleRealign);
+      window.removeEventListener('orientationchange', handleRealign);
+      document.removeEventListener('visibilitychange', handleRealign);
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    };
+  }, [applyTransform]);
 
   // Load more
   useEffect(() => {
@@ -202,7 +229,7 @@ export default function NewsSwiper({
 
   if (articles.length === 0) {
     return (
-      <div className="flex items-center justify-center h-screen w-screen bg-background text-foreground p-4 text-center">
+      <div className="flex items-center justify-center h-[100dvh] w-screen bg-background text-foreground p-4 text-center">
         <div className="bg-card p-6 rounded-lg shadow-xl">
           <p className="font-headline text-xl mb-2">Nenhuma Notícia no Feed</p>
           <p className="text-muted-foreground">O feed selecionado está vazio ou não retornou notícias.</p>
@@ -215,7 +242,7 @@ export default function NewsSwiper({
   return (
     <div
       ref={viewportRef}
-      className="h-screen w-screen overflow-hidden touch-none select-none"
+      className="h-[100dvh] w-screen overflow-hidden touch-none select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -223,14 +250,14 @@ export default function NewsSwiper({
     >
       <div
         ref={wrapperRef}
-        className="flex flex-col w-full"
+        className="flex flex-col w-full h-full"
         style={{ willChange: 'transform' }}
       >
         {articles.map((article, index) => {
           // Virtualização da janela de visualização: apenas cards adjacentes (+-2) montam DOM pesado e imagens
           const isNear = Math.abs(index - activeIndex) <= 2;
           return (
-            <div key={article.id} className="h-screen w-screen flex-shrink-0">
+            <div key={article.id} className="h-[100dvh] w-screen flex-shrink-0">
               {isNear ? (
                 <NewsItem
                   article={article}
@@ -246,7 +273,7 @@ export default function NewsSwiper({
         })}
 
         {showLoader && (
-          <div className="h-screen w-screen flex-shrink-0 flex items-center justify-center bg-background">
+          <div className="h-[100dvh] w-screen flex-shrink-0 flex items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-sm">Carregando mais notícias...</p>

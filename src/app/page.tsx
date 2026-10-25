@@ -166,7 +166,7 @@ export default function Home() {
   }, [setSeenArticleIds, loadFeed, filter]);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-background">
+    <main className="relative h-[100dvh] w-screen overflow-hidden bg-background">
       {/* Top Header Limpo: Apenas Logo e Engrenagem */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center pointer-events-none">
         <div className="pointer-events-auto">
@@ -186,7 +186,7 @@ export default function Home() {
 
       {/* Loading Skeleton Inicial */}
       {isLoading && (
-        <div className="h-screen w-screen flex flex-col items-center justify-center p-4 relative">
+        <div className="h-[100dvh] w-screen flex flex-col items-center justify-center p-4 relative">
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30 pointer-events-none" />
           <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
             <Skeleton className="h-6 w-1/4 rounded-full bg-white/20" />
@@ -203,7 +203,7 @@ export default function Home() {
 
       {/* Tela de Erro */}
       {!isLoading && error && (
-        <div className="flex items-center justify-center h-screen w-screen bg-background text-foreground p-4 text-center">
+        <div className="flex items-center justify-center h-[100dvh] w-screen bg-background text-foreground p-4 text-center">
           <div className="bg-card/90 backdrop-blur-md p-6 rounded-2xl border border-border max-w-sm shadow-xl">
             <p className="font-headline text-lg font-bold text-destructive mb-2">Erro ao carregar notícias</p>
             <p className="text-sm text-muted-foreground mb-4">{error}</p>
