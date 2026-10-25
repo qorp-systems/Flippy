@@ -2,6 +2,7 @@ import { SEED_SOURCES } from './sources';
 import { fetchWithTimeout, getAllSourcesHealth } from './http-client';
 import { parseFeed } from './feed-parser';
 import { applyQualityGates } from './quality-gate';
+import { generateCompactHash } from './hash';
 import type { CleanArticle, FeedSourceConfig } from './types';
 
 interface CacheEntry {
@@ -118,6 +119,7 @@ export async function getFeedSWR(options?: {
   category?: string;
   page?: number;
   limit?: number;
+  customSources?: FeedSourceConfig[];
 }): Promise<{
   articles: CleanArticle[];
   hasMore: boolean;
@@ -126,7 +128,10 @@ export async function getFeedSWR(options?: {
   source: 'FRESH' | 'STALE' | 'MISS';
 }> {
   metrics.totalRequests += 1;
-  const key = `${options?.region || 'all'}:${options?.category || 'all'}`;
+  const customHash = options?.customSources && options.customSources.length > 0
+    ? `:custom:${generateCompactHash(options.customSources.map(s => s.url).sort().join(','))}`
+    : '';
+  const key = `${options?.region || 'all'}:${options?.category || 'all'}${customHash}`;
   const page = Math.max(1, options?.page || 1);
   const limit = Math.max(1, options?.limit || DEFAULT_PAGE_SIZE);
 

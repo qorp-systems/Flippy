@@ -28,6 +28,11 @@ export default function Home() {
   const [seenArticleIds, setSeenArticleIds] = useLocalStorage<string[]>('flippy-seenArticleIds', []);
   const [feedSources, setFeedSources] = useLocalStorage<FeedSource[]>('flippy-feedSources', DEFAULT_FEEDS);
 
+  const feedSourcesRef = useRef(feedSources);
+  useEffect(() => {
+    feedSourcesRef.current = feedSources;
+  }, [feedSources]);
+
   // Carregamento inicial ou troca de filtro
   const loadFeed = useCallback(async (currentFilter: FeedFilter, isPullRefresh = false) => {
     if (isPullRefresh) setIsRefreshing(true);
@@ -37,14 +42,18 @@ export default function Home() {
     setHasMore(true);
 
     try {
-      const params = new URLSearchParams();
-      if (currentFilter === 'br') params.set('region', 'br');
-      if (currentFilter === 'world') params.set('region', 'world');
-      if (currentFilter === 'tech') params.set('category', 'tech');
-      params.set('page', '1');
-      params.set('limit', '20');
-
-      const res = await fetch(`/api/feed?${params.toString()}`);
+      const activeSources = feedSourcesRef.current.filter(f => !f.isHidden);
+      const res = await fetch('/api/feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          region: currentFilter === 'br' ? 'br' : currentFilter === 'world' ? 'world' : undefined,
+          category: currentFilter === 'tech' ? 'tech' : undefined,
+          page: 1,
+          limit: 20,
+          sources: activeSources,
+        }),
+      });
       if (!res.ok) throw new Error(`Falha ao carregar notícias (${res.status})`);
 
       const data = await res.json();
@@ -118,14 +127,18 @@ export default function Home() {
 
     try {
       const nextPage = page + 1;
-      const params = new URLSearchParams();
-      if (filter === 'br') params.set('region', 'br');
-      if (filter === 'world') params.set('region', 'world');
-      if (filter === 'tech') params.set('category', 'tech');
-      params.set('page', nextPage.toString());
-      params.set('limit', '15');
-
-      const res = await fetch(`/api/feed?${params.toString()}`);
+      const activeSources = feedSourcesRef.current.filter(f => !f.isHidden);
+      const res = await fetch('/api/feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          region: filter === 'br' ? 'br' : filter === 'world' ? 'world' : undefined,
+          category: filter === 'tech' ? 'tech' : undefined,
+          page: nextPage,
+          limit: 15,
+          sources: activeSources,
+        }),
+      });
       if (!res.ok) throw new Error('Falha ao paginar notícias');
 
       const data = await res.json();

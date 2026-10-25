@@ -91,8 +91,8 @@ export function applyQualityGates(articles: CleanArticle[]): CleanArticle[] {
 
   // 1. Quality Gate: Frescor e Imagem Válida (Estrito para Feed 100% Visual)
   const valid = articles.filter(a => {
-    // Rejeita notícias sem imagem comprovadamente válida
-    if (!isValidImageUrl(a.imageUrl)) return false;
+    // Se possuir imagem, rejeita se for tracking pixel, favicon ou formato corrompido
+    if (a.imageUrl && !isValidImageUrl(a.imageUrl)) return false;
 
     // Rejeita notícias com mais de 72h
     const pubTime = new Date(a.publishedAt).getTime();

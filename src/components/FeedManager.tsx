@@ -10,9 +10,19 @@ import {
 import type { FeedSource } from '@/types';
 import { Trash2, Search, RotateCw, Eye, EyeOff, Globe2, Sparkles, Laptop, PlusCircle, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { discoverFeedFromUrl } from '@/lib/news-engine/discovery';
 
 export type FeedFilter = 'all' | 'br' | 'world' | 'tech';
+
+const POPULAR_SUGGESTIONS = [
+  { name: 'TecMundo', query: 'tecmundo' },
+  { name: 'Canaltech', query: 'canaltech' },
+  { name: 'Estadão', query: 'estadao' },
+  { name: 'InfoMoney', query: 'infomoney' },
+  { name: 'Valor Econômico', query: 'valor economico' },
+  { name: 'TechCrunch', query: 'techcrunch' },
+  { name: 'Wired', query: 'wired' },
+  { name: 'Metrópoles', query: 'metropoles' },
+];
 
 interface FeedManagerProps {
   isOpen: boolean;
@@ -51,24 +61,45 @@ export default function FeedManager({
       title: feed?.isHidden ? 'Fonte desativada' : 'Fonte ativada',
       description: feed?.name,
     });
+    // Atualiza o feed com as fontes ativas
+    onRefresh();
   };
 
   const handleRemoveFeed = (id: string) => {
     onFeedSourcesChange(feedSources.filter(f => f.id !== id));
     toast({ title: 'Fonte removida da lista.' });
+    onRefresh();
   };
 
-  const handleDiscover = async () => {
-    if (!searchQuery.trim()) return;
+  const executeDiscover = async (queryText: string) => {
+    const targetQuery = queryText.trim();
+    if (!targetQuery) return;
     setIsSearching(true);
 
     try {
-      const discovered = await discoverFeedFromUrl(searchQuery);
-      if (discovered) {
-        if (feedSources.some(f => f.url === discovered.url)) {
-          toast({ title: 'Fonte já existente', description: `"${discovered.name}" já está na lista.` });
+      const res = await fetch('/api/feed/discover', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: targetQuery }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.feed) {
+        const discovered = data.feed;
+        const exists = feedSources.some(
+          f => f.url.toLowerCase() === discovered.url.toLowerCase() || f.id === discovered.id
+        );
+
+        if (exists) {
+          toast({
+            title: 'Fonte já existente',
+            description: `"${discovered.name}" já está na sua lista de fontes.`,
+          });
         } else {
-          onFeedSourcesChange([...feedSources, {
+          const newFeed: FeedSource = {
             id: discovered.id,
             name: discovered.name,
             url: discovered.url,
@@ -76,27 +107,42 @@ export default function FeedManager({
             category: discovered.category,
             region: discovered.region,
             brandColor: discovered.brandColor,
-          }]);
-          toast({ title: 'Fonte descoberta!', description: `"${discovered.name}" foi adicionada com sucesso.` });
+          };
+
+          onFeedSourcesChange([...feedSources, newFeed]);
+          toast({
+            title: 'Portal adicionado com sucesso! 🎉',
+            description: `"${discovered.name}" já está integrado ao seu feed.`,
+          });
           setSearchQuery('');
+          onRefresh();
         }
       } else {
         toast({
           title: 'Não encontramos o feed',
-          description: 'Verifique se o site possui RSS ou tente digitar o link direto.',
+          description: data?.error || 'Verifique se o site possui RSS ou tente digitar o link direto.',
           variant: 'destructive',
         });
       }
     } catch {
       toast({
-        title: 'Erro ao buscar',
-        description: 'Tente novamente com outro domínio.',
+        title: 'Erro de conexão',
+        description: 'Não foi possível contatar o serviço de busca. Tente novamente.',
         variant: 'destructive',
       });
     } finally {
       setIsSearching(false);
     }
   };
+
+  const handleDiscover = () => {
+    executeDiscover(searchQuery);
+  };
+
+  // Sugestões populares que ainda não foram adicionadas
+  const availableSuggestions = POPULAR_SUGGESTIONS.filter(
+    s => !feedSources.some(f => f.name.toLowerCase().includes(s.name.toLowerCase()))
+  );
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -189,12 +235,12 @@ export default function FeedManager({
               <PlusCircle className="w-4 h-4 text-primary" />
               Adicionar Novo Portal
             </h3>
-            <p className="text-xs text-muted-foreground">
-              Digite o domínio de qualquer site (ex: <code>olhardigital.com.br</code> ou <code>theverge.com</code>). O sistema descobre o feed sozinho.
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Digite o nome do portal (ex: <code>TecMundo</code>, <code>Canaltech</code>), o domínio ou link RSS direto. O sistema descobre sozinho.
             </p>
             <div className="flex gap-2">
               <Input
-                placeholder="ex: folha.uol.com.br"
+                placeholder="ex: tecmundo, folha.uol.com.br ou link direto"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleDiscover(); }}
@@ -205,11 +251,30 @@ export default function FeedManager({
                 onClick={handleDiscover}
                 disabled={isSearching || !searchQuery.trim()}
                 size="sm"
-                className="h-9 px-3"
+                className="h-9 px-3 shrink-0"
               >
                 {isSearching ? <RotateCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </Button>
             </div>
+
+            {/* Chips de Sugestões Rápidas */}
+            {availableSuggestions.length > 0 && (
+              <div className="pt-1.5">
+                <p className="text-[11px] text-muted-foreground/80 mb-1.5">Sugestões populares:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableSuggestions.slice(0, 4).map(sug => (
+                    <button
+                      key={sug.query}
+                      onClick={() => executeDiscover(sug.query)}
+                      disabled={isSearching}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-muted/50 hover:bg-primary/20 border border-border/60 hover:border-primary/40 text-foreground/90 transition-colors"
+                    >
+                      + {sug.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Lista de Fontes Ativas */}
@@ -252,14 +317,14 @@ export default function FeedManager({
                   <div className="flex items-center gap-1 shrink-0 ml-2">
                     <button
                       onClick={() => handleToggleVisibility(f.id)}
-                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                       title={f.isHidden ? 'Ativar fonte' : 'Desativar fonte'}
                     >
                       {f.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-primary" />}
                     </button>
                     <button
                       onClick={() => handleRemoveFeed(f.id)}
-                      className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                      className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
                       title="Remover fonte"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

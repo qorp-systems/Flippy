@@ -1,34 +1,17 @@
+const POPPINS_FLIPPY_PATH =
+  'M130.60 218.78L169.60 218.78L169.60 232.50L147.92 232.50L147.92 240.15L163.52 240.15L163.52 253.17L147.92 253.17L147.92 274L130.60 274L130.60 218.78M175.45 216.28L192.77 216.28L192.77 274L175.45 274L175.45 216.28M209.30 226.50Q204.78 226.50 202.05 224.08Q199.32 221.66 199.32 218Q199.32 214.25 202.05 211.80Q204.78 209.34 209.30 209.34Q213.75 209.34 216.48 211.80Q219.21 214.25 219.21 218Q219.21 221.66 216.48 224.08Q213.75 226.50 209.30 226.50M200.57 230.01L217.88 230.01L217.88 274L200.57 274L200.57 230.01M243 236.01Q244.64 232.97 247.72 231.22Q250.80 229.46 255.09 229.46Q260.24 229.46 264.37 232.15Q268.50 234.84 270.88 239.95Q273.26 245.06 273.26 252Q273.26 258.95 270.88 264.06Q268.50 269.16 264.37 271.86Q260.24 274.55 255.09 274.55Q250.80 274.55 247.72 272.79Q244.64 271.04 243 267.99L243 295.06L225.68 295.06L225.68 230.01L243 230.01L243 236.01M255.71 252Q255.71 248.49 253.92 246.54Q252.12 244.59 249.32 244.59Q246.51 244.59 244.71 246.54Q242.92 248.49 242.92 252Q242.92 255.51 244.71 257.46Q246.51 259.41 249.32 259.41Q252.12 259.41 253.92 257.46Q255.71 255.51 255.71 252M296.04 236.01Q297.68 232.97 300.76 231.22Q303.84 229.46 308.13 229.46Q313.28 229.46 317.41 232.15Q321.54 234.84 323.92 239.95Q326.30 245.06 326.30 252Q326.30 258.95 323.92 264.06Q321.54 269.16 317.41 271.86Q313.28 274.55 308.13 274.55Q303.84 274.55 300.76 272.79Q297.68 271.04 296.04 267.99L296.04 295.06L278.72 295.06L278.72 230.01L296.04 230.01L296.04 236.01M308.75 252Q308.75 248.49 306.96 246.54Q305.16 244.59 302.36 244.59Q299.55 244.59 297.75 246.54Q295.96 248.49 295.96 252Q295.96 255.51 297.75 257.46Q299.55 259.41 302.36 259.41Q305.16 259.41 306.96 257.46Q308.75 255.51 308.75 252M362.34 230.01L381.45 230.01L353.29 295.06L334.34 295.06L345.41 271.82L327.08 230.01L346.35 230.01L354.62 252.32';
 
 export default function FlippyLogo() {
-  // text-2xl font-size is 1.5rem (24px), line-height is 2rem (32px).
-  // We'll aim for the SVG to roughly match this size.
-  const svgHeight = 32; // px, matching 2rem line-height
-  const fontSize = 24;  // px, matching 1.5rem font-size
-  
-  // Approximate width for "Flippy" in Poppins Bold @ 24px.
-  // This value might need fine-tuning for perfect visual balance.
-  const svgWidth = 100; 
-
   return (
     <svg
-      width={svgWidth}
-      height={svgHeight}
-      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+      width={90}
+      height={32}
+      viewBox="126 205 260 95"
       aria-label="Flippy Logo"
       xmlns="http://www.w3.org/2000/svg"
+      className="fill-foreground"
     >
-      <text
-        fontFamily="Poppins, sans-serif" // Use Poppins font, as defined in font-headline
-        fontWeight="900"                // Explicitly use bold weight 900
-        fontSize={fontSize}             // Font size in px
-        fill="hsl(var(--foreground))"   // Use theme's foreground color (white in dark theme)
-        x="50%"                         // Center text horizontally
-        y="50%"                         // Center text vertically
-        dominantBaseline="middle"       // Vertical alignment for centering
-        textAnchor="middle"             // Horizontal alignment for centering
-      >
-        Flippy
-      </text>
+      <path d={POPPINS_FLIPPY_PATH} />
     </svg>
   );
 }
