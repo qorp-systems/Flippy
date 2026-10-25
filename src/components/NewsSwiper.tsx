@@ -226,16 +226,24 @@ export default function NewsSwiper({
         className="flex flex-col w-full"
         style={{ willChange: 'transform' }}
       >
-        {articles.map((article, index) => (
-          <div key={article.id} className="h-screen w-screen flex-shrink-0">
-            <NewsItem
-              article={article}
-              isActive={index === activeIndex}
-              shouldFetchSummary={index === activeIndex + 1}
-              onArticleClick={trackClick}
-            />
-          </div>
-        ))}
+        {articles.map((article, index) => {
+          // Virtualização da janela de visualização: apenas cards adjacentes (+-2) montam DOM pesado e imagens
+          const isNear = Math.abs(index - activeIndex) <= 2;
+          return (
+            <div key={article.id} className="h-screen w-screen flex-shrink-0">
+              {isNear ? (
+                <NewsItem
+                  article={article}
+                  isActive={index === activeIndex}
+                  shouldFetchSummary={index === activeIndex + 1}
+                  onArticleClick={trackClick}
+                />
+              ) : (
+                <div className="w-full h-full bg-background" />
+              )}
+            </div>
+          );
+        })}
 
         {showLoader && (
           <div className="h-screen w-screen flex-shrink-0 flex items-center justify-center bg-background">

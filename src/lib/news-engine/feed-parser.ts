@@ -49,10 +49,22 @@ function normalizeString(val: any): string {
 }
 
 function upgradeImageUrl(rawUrl: any): string {
-  const url = normalizeString(rawUrl);
+  let url = normalizeString(rawUrl);
   if (!url || url.includes('placehold.co')) return url;
+
+  // Corrige URLs sem protocolo (ex: //s2-g1.glbimg.com/...)
+  if (url.startsWith('//')) {
+    url = `https:${url}`;
+  }
+
   try {
     const u = new URL(url);
+    // Garante HTTPS para evitar bloqueio de Mixed Content em produção
+    if (u.protocol === 'http:') {
+      u.protocol = 'https:';
+      url = u.toString();
+    }
+
     const host = u.hostname;
 
     // BBC: troca /240/ por /1024/ para imagem Full HD
@@ -106,8 +118,29 @@ function getXmlFieldText(field: any): string {
   return String(field).trim();
 }
 
+function sanitizeXml(rawXml: string): string {
+  // Corrige ampersands não escapados que quebram parsers XML padrão (ex: "Tom & Jerry" -> "Tom &amp; Jerry")
+  let sanitized = rawXml.replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+  // Remove caracteres de controle XML inválidos (ASCII 0-31 exceto tab, lf, cr)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return sanitized;
+}
+
 export async function parseFeed(xml: string, source: FeedSourceConfig): Promise<CleanArticle[]> {
-  const parsed = await parseStringPromise(xml, { explicitArray: true, mergeAttrs: true });
+  let parsed: any;
+  try {
+    parsed = await parseStringPromise(xml, { explicitArray: true, mergeAttrs: true });
+  } catch {
+    // Fallback: tenta sanitizar entidades XML malformadas
+    try {
+      const cleanedXml = sanitizeXml(xml);
+      parsed = await parseStringPromise(cleanedXml, { explicitArray: true, mergeAttrs: true });
+    } catch {
+      return [];
+    }
+  }
+
+  if (!parsed) return [];
 
   let rawItems: any[] = [];
 

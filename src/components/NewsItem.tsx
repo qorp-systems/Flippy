@@ -2,10 +2,7 @@
 
 import type { NewsArticle } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, ChevronDown, CheckCircle2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { generateSummary } from '@/app/actions';
 
 interface NewsItemProps {
   article: NewsArticle;
@@ -16,18 +13,7 @@ interface NewsItemProps {
 
 const PLACEHOLDER = 'https://placehold.co/1080x1920.png';
 
-export default function NewsItem({ article, isActive, shouldFetchSummary, onArticleClick }: NewsItemProps) {
-  const [aiText, setAiText] = useState<string | null>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
-  const fetchedRef = useRef(false);
-
-  // Reset when article changes
-  useEffect(() => {
-    setAiText(null);
-    setLoadingAi(false);
-    fetchedRef.current = false;
-  }, [article.id]);
-
+export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
   // Se for o card divisor de transição
   if (article.isDivider) {
     return (
@@ -52,31 +38,8 @@ export default function NewsItem({ article, isActive, shouldFetchSummary, onArti
     );
   }
 
-  // Call Gemini only when description is absent and we have articleText
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    if (!isActive && !shouldFetchSummary) return;
-
-    const hasText = article.description && article.description.length > 30;
-    const hasCached = article.aiSummary;
-    if (hasText || hasCached) return;
-
-    if (!article.articleText || article.articleText.length < 50) return;
-
-    fetchedRef.current = true;
-    setLoadingAi(true);
-
-    generateSummary(article.id, article.articleText)
-      .then(({ summary, isAi }) => {
-        if (summary) setAiText(summary);
-        void isAi;
-      })
-      .catch(() => { /* silent fail */ })
-      .finally(() => setLoadingAi(false));
-  }, [isActive, shouldFetchSummary, article]);
-
-  const displayText = aiText || article.aiSummary || article.description || '';
-  const isAi = !!(aiText || (article.isAiSummary && article.aiSummary));
+  const displayText = article.summary || article.description || '';
+  const isAi = !!article.isAiSummary;
 
   const handleOpen = () => {
     if (article.originalUrl && article.originalUrl !== '#') {
@@ -88,11 +51,13 @@ export default function NewsItem({ article, isActive, shouldFetchSummary, onArti
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       <img
-        src={article.imageUrl}
+        src={article.imageUrl || PLACEHOLDER}
         alt={article.title}
         loading="eager"
         decoding="async"
-        className="absolute inset-0 w-full h-full object-cover"
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
+        className="absolute inset-0 w-full h-full object-cover select-none"
         style={{ willChange: 'transform' }}
         data-ai-hint={article.imageAiHint || 'news background'}
         onError={(e) => {
@@ -115,20 +80,13 @@ export default function NewsItem({ article, isActive, shouldFetchSummary, onArti
           {article.title}
         </h2>
 
-        <div className="min-h-[5rem] mb-3 sm:mb-4">
-          {loadingAi ? (
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-4/6" />
-            </div>
-          ) : (
-            <p className="font-body text-sm sm:text-base md:text-lg text-white/90 whitespace-pre-line leading-relaxed line-clamp-5"
-               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
-              {displayText || 'Conteúdo não disponível.'}
-            </p>
-          )}
+        <div className="min-h-[4rem] mb-3 sm:mb-4">
+          <p
+            className="font-body text-sm sm:text-base md:text-lg text-white/90 whitespace-pre-line leading-relaxed line-clamp-5"
+            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}
+          >
+            {displayText || 'Conteúdo não disponível.'}
+          </p>
         </div>
 
         <div className="mt-3 sm:mt-4 flex items-end justify-between gap-3">
@@ -164,7 +122,7 @@ export default function NewsItem({ article, isActive, shouldFetchSummary, onArti
               </p>
             )}
 
-            {isAi && !loadingAi && (
+            {isAi && (
               <p className="text-xs text-muted-foreground italic mb-0.5">Resumido por IA</p>
             )}
           </div>

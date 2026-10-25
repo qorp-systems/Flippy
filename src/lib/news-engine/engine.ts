@@ -1,5 +1,5 @@
 import { SEED_SOURCES } from './sources';
-import { fetchWithTimeout } from './http-client';
+import { fetchWithTimeout, getAllSourcesHealth } from './http-client';
 import { parseFeed } from './feed-parser';
 import { applyQualityGates } from './quality-gate';
 import type { CleanArticle, FeedSourceConfig } from './types';
@@ -7,7 +7,18 @@ import type { CleanArticle, FeedSourceConfig } from './types';
 interface CacheEntry {
   articles: CleanArticle[];
   timestamp: number;
+  snapshotVersion: string;
   isRevalidating?: boolean;
+}
+
+export interface EngineMetrics {
+  totalRequests: number;
+  freshHits: number;
+  staleHits: number;
+  misses: number;
+  lastRevalidationAt?: string;
+  cacheKeysCount: number;
+  sourcesHealth: ReturnType<typeof getAllSourcesHealth>;
 }
 
 const FRESH_TTL_MS = 4 * 60 * 1000;      // 4 minutos: responde na hora da RAM
@@ -16,10 +27,30 @@ const DEFAULT_PAGE_SIZE = 15;
 
 declare global {
   var __flippy_news_cache__: Map<string, CacheEntry> | undefined;
+  var __flippy_metrics__: {
+    totalRequests: number;
+    freshHits: number;
+    staleHits: number;
+    misses: number;
+    lastRevalidationAt?: string;
+  } | undefined;
+  var __flippy_in_flight__: Map<string, Promise<CleanArticle[]>> | undefined;
 }
 
 const cache = globalThis.__flippy_news_cache__ ?? new Map<string, CacheEntry>();
 globalThis.__flippy_news_cache__ = cache;
+
+const metrics = globalThis.__flippy_metrics__ ?? {
+  totalRequests: 0,
+  freshHits: 0,
+  staleHits: 0,
+  misses: 0,
+};
+globalThis.__flippy_metrics__ = metrics;
+
+// Single-flight promise coalescing map: impede stampede de requests repetidas
+const inFlightRequests = globalThis.__flippy_in_flight__ ?? new Map<string, Promise<CleanArticle[]>>();
+globalThis.__flippy_in_flight__ = inFlightRequests;
 
 export async function fetchFromSource(source: FeedSourceConfig): Promise<CleanArticle[]> {
   try {
@@ -59,6 +90,29 @@ export async function aggregateFeeds(options?: {
   return applyQualityGates(allArticles);
 }
 
+/**
+ * Padrão Single-Flight: se já existir uma coleta em andamento para a mesma chave,
+ * todas as requisições aguardam a mesma Promise sem disparar novas chamadas HTTP externas.
+ */
+function singleFlightAggregate(key: string, options?: { region?: 'br' | 'world'; category?: string; customSources?: FeedSourceConfig[] }): Promise<CleanArticle[]> {
+  const existing = inFlightRequests.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = aggregateFeeds(options)
+    .then(articles => {
+      metrics.lastRevalidationAt = new Date().toISOString();
+      return articles;
+    })
+    .finally(() => {
+      inFlightRequests.delete(key);
+    });
+
+  inFlightRequests.set(key, promise);
+  return promise;
+}
+
 export async function getFeedSWR(options?: {
   region?: 'br' | 'world';
   category?: string;
@@ -68,8 +122,10 @@ export async function getFeedSWR(options?: {
   articles: CleanArticle[];
   hasMore: boolean;
   total: number;
+  snapshotVersion: string;
   source: 'FRESH' | 'STALE' | 'MISS';
 }> {
+  metrics.totalRequests += 1;
   const key = `${options?.region || 'all'}:${options?.category || 'all'}`;
   const page = Math.max(1, options?.page || 1);
   const limit = Math.max(1, options?.limit || DEFAULT_PAGE_SIZE);
@@ -81,17 +137,24 @@ export async function getFeedSWR(options?: {
   // 1. FRESH HIT (< 4 minutos)
   if (cached && now - cached.timestamp < FRESH_TTL_MS) {
     cacheSource = 'FRESH';
+    metrics.freshHits += 1;
   }
-  // 2. STALE HIT (< 1 hora) -> Responde na hora e atualiza em background
+  // 2. STALE HIT (< 1 hora) -> Responde na hora e atualiza em background com Single-Flight
   else if (cached && now - cached.timestamp < STALE_TTL_MS) {
     cacheSource = 'STALE';
+    metrics.staleHits += 1;
     const entry = cached;
     if (!entry.isRevalidating) {
       entry.isRevalidating = true;
-      aggregateFeeds(options)
+      singleFlightAggregate(key, options)
         .then(freshArticles => {
           if (freshArticles.length > 0) {
-            cache.set(key, { articles: freshArticles, timestamp: Date.now(), isRevalidating: false });
+            cache.set(key, {
+              articles: freshArticles,
+              timestamp: Date.now(),
+              snapshotVersion: new Date().toISOString(),
+              isRevalidating: false,
+            });
           } else {
             entry.isRevalidating = false;
           }
@@ -101,13 +164,21 @@ export async function getFeedSWR(options?: {
         });
     }
   }
-  // 3. CACHE MISS -> Busca na hora
+  // 3. CACHE MISS -> Busca imediata unificada via Single-Flight
   else {
     cacheSource = 'MISS';
-    const fresh = await aggregateFeeds(options);
+    metrics.misses += 1;
+    const fresh = await singleFlightAggregate(key, options);
+    const snapshotVer = new Date().toISOString();
     if (fresh.length > 0) {
-      cache.set(key, { articles: fresh, timestamp: now, isRevalidating: false });
-      cached = { articles: fresh, timestamp: now, isRevalidating: false };
+      const newEntry: CacheEntry = {
+        articles: fresh,
+        timestamp: now,
+        snapshotVersion: snapshotVer,
+        isRevalidating: false,
+      };
+      cache.set(key, newEntry);
+      cached = newEntry;
     }
   }
 
@@ -120,6 +191,29 @@ export async function getFeedSWR(options?: {
     articles: paginatedArticles,
     hasMore,
     total: all.length,
+    snapshotVersion: cached?.snapshotVersion || 'v0',
     source: cacheSource,
   };
+}
+
+export function getEngineMetrics(): EngineMetrics {
+  return {
+    ...metrics,
+    cacheKeysCount: cache.size,
+    sourcesHealth: getAllSourcesHealth(),
+  };
+}
+
+export async function forceRevalidate(options?: { region?: 'br' | 'world'; category?: string }): Promise<number> {
+  const key = `${options?.region || 'all'}:${options?.category || 'all'}`;
+  const fresh = await singleFlightAggregate(key, options);
+  if (fresh.length > 0) {
+    cache.set(key, {
+      articles: fresh,
+      timestamp: Date.now(),
+      snapshotVersion: new Date().toISOString(),
+      isRevalidating: false,
+    });
+  }
+  return fresh.length;
 }
