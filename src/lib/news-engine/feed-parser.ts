@@ -92,15 +92,35 @@ function upgradeImageUrl(rawUrl: any): string {
 
 function extractImageFromHtml(html: string): string | null {
   if (!html) return null;
-  // data-src / data-original
-  const dataSrc = html.match(/<img[^>]+\bdata-(?:src|original|full)=["']([^"']+)["']/i)?.[1];
-  if (dataSrc && dataSrc.startsWith('http')) return dataSrc;
 
-  // src convencional
+  // 1. Inspeciona srcset (extrai a versão de maior resolução disponível)
+  const srcsetMatch = html.match(/\bsrcset=["']([^"']+)["']/i)?.[1];
+  if (srcsetMatch) {
+    const candidates = srcsetMatch.split(',').map(s => {
+      const parts = s.trim().split(/\s+/);
+      const url = parts[0]?.trim();
+      const width = parseInt(parts[1]?.replace(/[^\d]/g, '') || '0', 10);
+      return { url, width };
+    }).filter(c => c.url && c.url.startsWith('http') && !c.url.endsWith('/') && !c.url.includes('pixel'));
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.width - a.width);
+      return candidates[0].url;
+    }
+  }
+
+  // 2. data-src / data-original / data-full / data-large (Lazy loading em CMSs)
+  const dataSrc = html.match(/<img[^>]+\bdata-(?:src|original|full|large)=["']([^"']+)["']/i)?.[1];
+  if (dataSrc && dataSrc.startsWith('http') && !dataSrc.endsWith('/') && !dataSrc.includes('1x1')) {
+    return dataSrc;
+  }
+
+  // 3. src convencional
   const src = html.match(/<img[^>]+\bsrc=["']([^"']+)["']/i)?.[1];
-  if (src && src.startsWith('http') && !src.includes('1x1') && !src.includes('pixel') && !src.includes('spacer')) {
+  if (src && src.startsWith('http') && !src.endsWith('/') && !src.includes('1x1') && !src.includes('pixel') && !src.includes('spacer')) {
     return src;
   }
+
   return null;
 }
 
@@ -171,9 +191,12 @@ export async function parseFeed(xml: string, source: FeedSourceConfig): Promise<
       else if (Array.isArray(item.link)) {
         const first = item.link[0];
         if (typeof first === 'string') originalUrl = first.trim();
-        else if (first?.href) originalUrl = first.href.trim();
-      } else if (item.link?.href) {
+        else if (first?.href && typeof first.href === 'string') originalUrl = first.href.trim();
+        else if (first?._ && typeof first._ === 'string') originalUrl = first._.trim();
+      } else if (item.link?.href && typeof item.link.href === 'string') {
         originalUrl = item.link.href.trim();
+      } else if (item.link?._ && typeof item.link._ === 'string') {
+        originalUrl = item.link._.trim();
       }
     }
     if (!originalUrl && item.guid) {

@@ -1,7 +1,19 @@
 import type { CleanArticle } from './types';
 
 const MAX_AGE_HOURS = 72; // Notícias com mais de 72h (3 dias) são descartadas
-const BAD_IMAGE_PATTERNS = /(favicon|tracking|pixel|1x1|16x16|32x32|spacer\.gif|blank\.gif)/i;
+const BAD_IMAGE_PATTERNS = /(favicon|tracking|pixel|1x1|16x16|32x32|spacer\.gif|blank\.gif|placehold\.co)/i;
+const VALID_IMAGE_EXT_RE = /\.(jpe?g|png|webp|avif)(\?.*)?$/i;
+const KNOWN_CDN_RE = /(glbimg\.com|bbci\.co\.uk|wp\.com|cnnbrasil\.com\.br|ebc\.com\.br|odcdn\.com\.br|theverge\.com|aljazeera\.com|dw\.com)/i;
+
+export function isValidImageUrl(url?: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (trimmed.length < 12) return false;
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return false;
+  if (trimmed.endsWith('/')) return false; // Rejeita diretórios como /uploads/
+  if (BAD_IMAGE_PATTERNS.test(trimmed)) return false;
+  return VALID_IMAGE_EXT_RE.test(trimmed) || KNOWN_CDN_RE.test(trimmed);
+}
 
 const STOPWORDS = new Set([
   'de', 'a', 'o', 'que', 'e', 'do', 'da', 'em', 'um', 'para', 'com', 'nao', 'uma',
@@ -77,10 +89,10 @@ export function applyQualityGates(articles: CleanArticle[]): CleanArticle[] {
   const now = Date.now();
   const maxAgeMs = MAX_AGE_HOURS * 60 * 60 * 1000;
 
-  // 1. Quality Gate: Frescor e Imagem Válida
+  // 1. Quality Gate: Frescor e Imagem Válida (Estrito para Feed 100% Visual)
   const valid = articles.filter(a => {
-    // Rejeita notícias sem imagem válida
-    if (!a.imageUrl || BAD_IMAGE_PATTERNS.test(a.imageUrl)) return false;
+    // Rejeita notícias sem imagem comprovadamente válida
+    if (!isValidImageUrl(a.imageUrl)) return false;
 
     // Rejeita notícias com mais de 72h
     const pubTime = new Date(a.publishedAt).getTime();

@@ -2,7 +2,8 @@
 
 import type { NewsArticle } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { ExternalLink, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface NewsItemProps {
   article: NewsArticle;
@@ -11,9 +12,14 @@ interface NewsItemProps {
   onArticleClick?: (article: NewsArticle) => void;
 }
 
-const PLACEHOLDER = 'https://placehold.co/1080x1920.png';
-
 export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
+  const [imageError, setImageError] = useState(false);
+
+  // Reseta estado de erro ao trocar de matéria
+  useEffect(() => {
+    setImageError(false);
+  }, [article.id]);
+
   // Se for o card divisor de transição
   if (article.isDivider) {
     return (
@@ -40,6 +46,7 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
 
   const displayText = article.summary || article.description || '';
   const isAi = !!article.isAiSummary;
+  const brandColor = article.brandColor || article.source?.brandColor || '#29ABE2';
 
   const handleOpen = () => {
     if (article.originalUrl && article.originalUrl !== '#') {
@@ -48,26 +55,44 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
     }
   };
 
+  const hasValidImage = Boolean(article.imageUrl && !imageError);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
-      <img
-        src={article.imageUrl || PLACEHOLDER}
-        alt={article.title}
-        loading="eager"
-        decoding="async"
-        referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
-        className="absolute inset-0 w-full h-full object-cover select-none"
-        style={{ willChange: 'transform' }}
-        data-ai-hint={article.imageAiHint || 'news background'}
-        onError={(e) => {
-          const t = e.target as HTMLImageElement;
-          if (t.src !== PLACEHOLDER) {
-            t.src = PLACEHOLDER;
-            t.onerror = null;
-          }
-        }}
-      />
+      {/* Imagem Real de Alta Resolução ou Fallback Editorial Nativo (Sem placehold.co) */}
+      {hasValidImage ? (
+        <img
+          src={article.imageUrl}
+          alt={article.title}
+          loading="eager"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          className="absolute inset-0 w-full h-full object-cover select-none"
+          style={{ willChange: 'transform' }}
+          data-ai-hint={article.imageAiHint || 'news background'}
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <div
+          className="absolute inset-0 w-full h-full flex flex-col justify-center items-center select-none"
+          style={{
+            background: `radial-gradient(ellipse at 50% 30%, ${brandColor}33 0%, #0d1117 75%)`,
+          }}
+        >
+          {/* Padrão editorial geométrico sutil */}
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:28px_28px]" />
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center border shadow-2xl backdrop-blur-md mb-24 opacity-80"
+            style={{
+              backgroundColor: `${brandColor}22`,
+              borderColor: `${brandColor}44`,
+            }}
+          >
+            <Newspaper className="w-10 h-10" style={{ color: brandColor }} />
+          </div>
+        </div>
+      )}
 
       {/* Gradiente em duas camadas: escurece o fundo sem degradar a imagem */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/10 pointer-events-none" />
@@ -96,7 +121,7 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
                 <span
                   className="font-body text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm text-white shadow-sm"
                   style={{
-                    backgroundColor: article.brandColor || article.source?.brandColor || '#29ABE2',
+                    backgroundColor: brandColor,
                   }}
                 >
                   {article.sourceName}
