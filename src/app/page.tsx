@@ -181,7 +181,7 @@ export default function Home() {
   return (
     <main className="relative h-[100dvh] w-screen overflow-hidden bg-background">
       {/* Título principal semântico para SEO e acessibilidade */}
-      <h1 className="sr-only">Flippy - Notícias Rápidas em Formato Stories e Shorts</h1>
+      <h1 className="sr-only">Flippy - Notícias Rápidas em Formato Visual</h1>
 
       {/* Top Header Limpo: Apenas Logo e Engrenagem */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center pointer-events-none">

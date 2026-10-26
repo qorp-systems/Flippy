@@ -1,7 +1,7 @@
 {
   "name": "Flippy - Notícias Rápidas",
   "short_name": "Flippy",
-  "description": "Notícias do Brasil e do mundo em formato rápido, visual e dinâmico estilo stories.",
+  "description": "Notícias do Brasil e do mundo em formato rápido, visual e dinâmico.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
