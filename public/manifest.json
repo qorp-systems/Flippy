@@ -1,13 +1,16 @@
 {
-  "name": "Flippy News",
+  "name": "Flippy - Notícias Rápidas",
   "short_name": "Flippy",
-  "description": "Notícias via Swipe mobile.",
+  "description": "Notícias do Brasil e do mundo em formato rápido, visual e dinâmico estilo stories.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#000000",
+  "lang": "pt-BR",
+  "categories": ["news", "magazines"],
   "icons": [
     {
       "src": "/flippy-icon.svg",
