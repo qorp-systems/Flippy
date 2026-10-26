@@ -3,7 +3,7 @@
 import type { NewsArticle } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface NewsItemProps {
   article: NewsArticle;
@@ -48,11 +48,41 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
   const isAi = !!article.isAiSummary;
   const brandColor = article.brandColor || article.source?.brandColor || '#29ABE2';
 
+  const lastOpenTimeRef = useRef(0);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+
   const handleOpen = () => {
-    if (article.originalUrl && article.originalUrl !== '#') {
-      onArticleClick?.(article);
-      window.open(article.originalUrl, '_blank', 'noopener,noreferrer');
-    }
+    if (!article.originalUrl || article.originalUrl === '#') return;
+    const now = Date.now();
+    if (now - lastOpenTimeRef.current < 450) return; // Debounce anti duplo disparo
+    lastOpenTimeRef.current = now;
+
+    onArticleClick?.(article);
+    window.open(article.originalUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartPos.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const t = e.changedTouches[0];
+    const dx = Math.abs(t.clientX - touchStartPos.current.x);
+    const dy = Math.abs(t.clientY - touchStartPos.current.y);
+    touchStartPos.current = null;
+
+    // Se moveu mais de 16px, foi gesto de swipe e não toque
+    if (dx > 16 || dy > 16) return;
+
+    // Toque rápido e limpo: abre imediatamente com 0ms de delay
+    handleOpen();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleOpen();
   };
 
   const hasValidImage = Boolean(article.imageUrl && !imageError);
@@ -98,20 +128,39 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/10 pointer-events-none" />
 
       <div className="absolute bottom-0 left-0 right-0 pt-4 px-4 pb-20 sm:pt-6 sm:px-6 sm:pb-20 md:pt-8 md:px-8 md:pb-24 text-foreground">
-        <h2
-          className="font-headline text-2xl sm:text-3xl font-bold mb-2 sm:mb-3"
-          style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}
+        <div
+          onClick={handleClick}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className={
+            article.originalUrl && article.originalUrl !== '#'
+              ? 'cursor-pointer select-none transition-opacity active:opacity-80 focus:outline-none'
+              : ''
+          }
+          role={article.originalUrl && article.originalUrl !== '#' ? 'button' : undefined}
+          tabIndex={article.originalUrl && article.originalUrl !== '#' ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleOpen();
+            }
+          }}
         >
-          {article.title}
-        </h2>
-
-        <div className="min-h-[4rem] mb-3 sm:mb-4">
-          <p
-            className="font-body text-sm sm:text-base md:text-lg text-white/90 whitespace-pre-line leading-relaxed line-clamp-5"
-            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}
+          <h2
+            className="font-headline text-2xl sm:text-3xl font-bold mb-2 sm:mb-3"
+            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}
           >
-            {displayText || 'Conteúdo não disponível.'}
-          </p>
+            {article.title}
+          </h2>
+
+          <div className="min-h-[4rem] mb-3 sm:mb-4">
+            <p
+              className="font-body text-sm sm:text-base md:text-lg text-white/90 whitespace-pre-line leading-relaxed line-clamp-5"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}
+            >
+              {displayText || 'Conteúdo não disponível.'}
+            </p>
+          </div>
         </div>
 
         <div className="mt-3 sm:mt-4 flex items-end justify-between gap-3">
@@ -153,7 +202,10 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
           </div>
 
           <Button
-            onClick={handleOpen}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpen();
+            }}
             variant="outline"
             size="sm"
             className="font-body shrink-0 border-white/20 bg-black/40 hover:bg-black/60 text-white"
