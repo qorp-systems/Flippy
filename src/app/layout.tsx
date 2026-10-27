@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { Analytics } from '@vercel/analytics/next';
 import { siteConfig } from '@/lib/seo-config';
 
 export const metadata: Metadata = {
@@ -140,6 +141,7 @@ export default function RootLayout({
       <body className="font-body antialiased h-full bg-background text-foreground">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
