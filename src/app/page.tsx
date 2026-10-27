@@ -183,17 +183,17 @@ export default function Home() {
       {/* Título principal semântico para SEO e acessibilidade */}
       <h1 className="sr-only">Flippy - Notícias Rápidas em Formato Visual</h1>
 
-      {/* Top Header Limpo: Apenas Logo e Engrenagem */}
+      {/* Top Header Limpo: Logo quando necessário e Engrenagem */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center pointer-events-none">
         <div className="pointer-events-auto">
-          <FlippyLogo />
+          {(isLoading || !!error || sessionArticles.length === 0) && <FlippyLogo />}
         </div>
 
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsFeedManagerOpen(true)}
-          className="text-white hover:bg-white/10 rounded-full h-10 w-10 backdrop-blur-md bg-black/30 border border-white/10 pointer-events-auto transition-transform active:scale-95 shadow-md"
+          className="text-white hover:bg-white/10 rounded-full h-10 w-10 backdrop-blur-md bg-black/30 border border-white/10 pointer-events-auto transition-transform active:scale-95 shadow-md ml-auto"
         >
           <Settings className="h-5 w-5" />
           <span className="sr-only">Configurações e Feeds</span>

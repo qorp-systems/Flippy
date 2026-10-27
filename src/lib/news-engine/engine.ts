@@ -201,6 +201,29 @@ export async function getFeedSWR(options?: {
   };
 }
 
+export async function getArticleById(id: string): Promise<CleanArticle | null> {
+  if (!id) return null;
+
+  // 1. Procurar em todos os caches ativos em memória
+  for (const entry of cache.values()) {
+    const found = entry.articles.find(a => a.id === id);
+    if (found) return found;
+  }
+
+  // 2. Se não estiver no cache imediato, dispara a busca do feed
+  try {
+    const feed = await getFeedSWR();
+    for (const entry of cache.values()) {
+      const found = entry.articles.find(a => a.id === id);
+      if (found) return found;
+    }
+    return feed.articles.find(a => a.id === id) || null;
+  } catch (err) {
+    console.error('[engine] Erro ao buscar artigo por ID:', err);
+    return null;
+  }
+}
+
 export function getEngineMetrics(): EngineMetrics {
   return {
     ...metrics,

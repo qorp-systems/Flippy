@@ -2,8 +2,11 @@
 
 import type { NewsArticle } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
+import { Send, Loader2, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import FlippyLogo from '@/components/FlippyLogo';
+import { shareArticle, generateCardBlob } from '@/lib/share-snapshot';
+import { useToast } from '@/hooks/use-toast';
 
 interface NewsItemProps {
   article: NewsArticle;
@@ -12,13 +15,57 @@ interface NewsItemProps {
   onArticleClick?: (article: NewsArticle) => void;
 }
 
-export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
+export default function NewsItem({ article, isActive, onArticleClick }: NewsItemProps) {
   const [imageError, setImageError] = useState(false);
+  const [useDirectImage, setUseDirectImage] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const cachedBlobRef = useRef<Blob | null>(null);
+  const { toast } = useToast();
 
   // Reseta estado de erro ao trocar de matéria
   useEffect(() => {
     setImageError(false);
+    setUseDirectImage(false);
+    setIsSharing(false);
+    cachedBlobRef.current = null;
   }, [article.id]);
+
+  // Pré-renderiza a snapshot em background enquanto o usuário lê o card (sem bloquear a thread)
+  // permitindo que o clique no botão dispare o navigator.share instantaneamente dentro do gesto do usuário
+  useEffect(() => {
+    if (!isActive || article.isDivider) return;
+
+    const timer = setTimeout(async () => {
+      if (!cardRef.current) return;
+      try {
+        const b = await generateCardBlob(cardRef.current);
+        cachedBlobRef.current = b;
+      } catch {
+        // silencioso
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [isActive, article.id, article.isDivider]);
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
+    try {
+      await shareArticle(cardRef.current, article, cachedBlobRef.current, (opts) => {
+        toast({
+          title: opts.title,
+          description: opts.description,
+          variant: opts.variant,
+        });
+      });
+    } catch (error) {
+      console.error('Erro ao acionar compartilhamento:', error);
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   // Se for o card divisor de transição
   if (article.isDivider) {
@@ -86,22 +133,37 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
   };
 
   const hasValidImage = Boolean(article.imageUrl && !imageError);
+  const proxiedImageUrl =
+    article.imageUrl && !article.imageUrl.startsWith('/') && !article.imageUrl.startsWith('data:')
+      ? `/api/proxy-image?url=${encodeURIComponent(article.imageUrl)}`
+      : article.imageUrl;
+  const currentImageSrc = useDirectImage ? article.imageUrl : proxiedImageUrl;
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-background">
+    <div ref={cardRef} className="relative w-full h-full overflow-hidden bg-background">
+      {/* Top Branding Flippy no card (visível na tela e capturado na snapshot) */}
+      <div className="absolute top-4 left-4 z-10 select-none pointer-events-none">
+        <FlippyLogo />
+      </div>
+
       {/* Imagem Real de Alta Resolução ou Fallback Editorial Nativo (Sem placehold.co) */}
       {hasValidImage ? (
         <img
-          src={article.imageUrl}
+          src={currentImageSrc}
           alt={article.title}
           loading="eager"
           decoding="async"
           referrerPolicy="no-referrer"
-          crossOrigin="anonymous"
           className="absolute inset-0 w-full h-full object-cover select-none"
           style={{ willChange: 'transform' }}
           data-ai-hint={article.imageAiHint || 'news background'}
-          onError={() => setImageError(true)}
+          onError={() => {
+            if (!useDirectImage && article.imageUrl) {
+              setUseDirectImage(true);
+            } else {
+              setImageError(true);
+            }
+          }}
         />
       ) : (
         <div
@@ -164,11 +226,11 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
         </div>
 
         <div className="mt-3 sm:mt-4 flex items-end justify-between gap-3">
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               {article.sourceName && (
                 <span
-                  className="font-body text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm text-white shadow-sm"
+                  className="font-body text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm text-white shadow-sm whitespace-nowrap inline-flex items-center shrink-0"
                   style={{
                     backgroundColor: brandColor,
                   }}
@@ -178,20 +240,20 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
               )}
 
               {article.dayBucket && article.dayBucket !== 'today' && (
-                <span className="font-body text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded bg-white/20 text-white/90 backdrop-blur-sm">
+                <span className="font-body text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded bg-white/20 text-white/90 backdrop-blur-sm whitespace-nowrap shrink-0">
                   {article.dayBucket === 'yesterday' ? 'Ontem' : 'Anterior'}
                 </span>
               )}
 
               {article.relativeTime && (
-                <span className="text-xs text-white/70 font-body">
+                <span className="text-xs text-white/70 font-body whitespace-nowrap shrink-0">
                   • {article.relativeTime}
                 </span>
               )}
             </div>
 
             {article.relatedSources && article.relatedSources.length > 0 && (
-              <p className="text-[11px] text-white/60">
+              <p className="text-[11px] text-white/60 truncate">
                 Também coberto por: {article.relatedSources.map(s => s.name).join(', ')}
               </p>
             )}
@@ -202,17 +264,28 @@ export default function NewsItem({ article, onArticleClick }: NewsItemProps) {
           </div>
 
           <Button
+            data-no-snapshot="true"
             onClick={(e) => {
               e.stopPropagation();
-              handleOpen();
+              handleShare();
             }}
+            disabled={isSharing}
             variant="outline"
             size="sm"
-            className="font-body shrink-0 border-white/20 bg-black/40 hover:bg-black/60 text-white"
-            disabled={!article.originalUrl || article.originalUrl === '#'}
+            className="font-body shrink-0 h-8 px-2.5 text-xs border-white/20 bg-black/40 hover:bg-black/60 text-white transition-all active:scale-95 shadow-md"
+            aria-label="Compartilhar matéria"
           >
-            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-            Ler matéria
+            {isSharing ? (
+              <>
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <Send className="mr-1.5 h-3.5 w-3.5" />
+                Compartilhar
+              </>
+            )}
           </Button>
         </div>
       </div>
