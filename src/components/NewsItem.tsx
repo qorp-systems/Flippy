@@ -18,23 +18,28 @@ interface NewsItemProps {
 export default function NewsItem({ article, isActive, onArticleClick }: NewsItemProps) {
   const [imageError, setImageError] = useState(false);
   const [useDirectImage, setUseDirectImage] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const cachedBlobRef = useRef<Blob | null>(null);
   const { toast } = useToast();
 
-  // Reseta estado de erro ao trocar de matéria
+  // Reseta estado ao trocar de matéria
   useEffect(() => {
     setImageError(false);
     setUseDirectImage(false);
+    setImageLoaded(false);
     setIsSharing(false);
     cachedBlobRef.current = null;
   }, [article.id]);
 
-  // Pré-renderiza a snapshot em background enquanto o usuário lê o card (sem bloquear a thread)
-  // permitindo que o clique no botão dispare o navigator.share instantaneamente dentro do gesto do usuário
+  // Pré-renderiza a snapshot em background assim que a imagem correspondente ao post carregar
   useEffect(() => {
     if (!isActive || article.isDivider) return;
+
+    // Se o artigo possui imagem, aguarda o onLoad da imagem real antes de gerar o blob
+    const hasImagePending = Boolean(article.imageUrl && !imageError && !imageLoaded);
+    if (hasImagePending) return;
 
     const timer = setTimeout(async () => {
       if (!cardRef.current) return;
@@ -44,10 +49,10 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
       } catch {
         // silencioso
       }
-    }, 600);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [isActive, article.id, article.isDivider]);
+  }, [isActive, article.id, article.isDivider, imageLoaded, imageError]);
 
   const handleShare = async () => {
     if (isSharing) return;
@@ -141,8 +146,8 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
 
   return (
     <div ref={cardRef} className="relative w-full h-full overflow-hidden bg-background">
-      {/* Top Branding Flippy no card (visível na tela e capturado na snapshot) */}
-      <div className="absolute top-4 left-4 z-10 select-none pointer-events-none">
+      {/* Top Branding Flippy no card (visível apenas na snapshot gerada) */}
+      <div data-snapshot-logo className="absolute top-4 left-4 z-10 select-none pointer-events-none hidden">
         <FlippyLogo />
       </div>
 
@@ -152,11 +157,10 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
           src={currentImageSrc}
           alt={article.title}
           loading="eager"
-          decoding="async"
           referrerPolicy="no-referrer"
           className="absolute inset-0 w-full h-full object-cover select-none"
-          style={{ willChange: 'transform' }}
           data-ai-hint={article.imageAiHint || 'news background'}
+          onLoad={() => setImageLoaded(true)}
           onError={() => {
             if (!useDirectImage && article.imageUrl) {
               setUseDirectImage(true);

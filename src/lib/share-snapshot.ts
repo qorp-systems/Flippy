@@ -15,23 +15,35 @@ export async function generateCardBlob(cardElement: HTMLElement): Promise<Blob |
   const width = cardElement.offsetWidth || window.innerWidth;
   const height = cardElement.offsetHeight || window.innerHeight;
 
-  return await toBlob(cardElement, {
-    width,
-    height,
-    canvasWidth: Math.min(width * 2, 1600),
-    canvasHeight: Math.min(height * 2, 2800),
-    pixelRatio: 2,
-    skipFonts: true,
-    cacheBust: false,
-    imagePlaceholder:
-      'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-    filter: (node) => {
-      if (node instanceof HTMLElement && node.dataset.noSnapshot === 'true') {
-        return false;
-      }
-      return true;
-    },
-  });
+  const snapshotLogo = cardElement.querySelector<HTMLElement>('[data-snapshot-logo]');
+  if (snapshotLogo) {
+    snapshotLogo.style.display = 'block';
+  }
+
+  try {
+    return await toBlob(cardElement, {
+      width,
+      height,
+      canvasWidth: Math.min(width * 2, 1600),
+      canvasHeight: Math.min(height * 2, 2800),
+      pixelRatio: 2,
+      skipFonts: true,
+      cacheBust: false,
+      includeQueryParams: true, // Garante que a URL completa com parâmetros de cada matéria seja usada como chave de cache
+      imagePlaceholder:
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+      filter: (node) => {
+        if (node instanceof HTMLElement && node.dataset.noSnapshot === 'true') {
+          return false;
+        }
+        return true;
+      },
+    });
+  } finally {
+    if (snapshotLogo) {
+      snapshotLogo.style.display = 'none';
+    }
+  }
 }
 
 /**
