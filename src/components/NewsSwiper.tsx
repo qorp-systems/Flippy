@@ -4,8 +4,9 @@ import type { NewsArticle } from '@/types';
 import NewsItem from './NewsItem';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronUp } from 'lucide-react';
 import { usePreferences } from '@/hooks/usePreferences';
+import { cn } from '@/lib/utils';
 
 const SWIPE_THRESHOLD = 0.12;    // 12% da altura da tela (super responsivo)
 const VELOCITY_THRESHOLD = 0.18; // px/ms — flick leve já passa de notícia
@@ -34,6 +35,7 @@ export default function NewsSwiper({
   isLoadingMore,
 }: NewsSwiperProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hasSwiped, setHasSwiped] = useState(false);
   const activeIndexRef = useRef(0);
   const viewportRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,20 @@ export default function NewsSwiper({
   const activatedAt = useRef(Date.now());
   const prevIndexRef = useRef(0);
   const { trackDwell, trackClick } = usePreferences();
+
+  // Esconde o indicador ao avançar de slide ou após 6 segundos
+  useEffect(() => {
+    if (activeIndex > 0) {
+      setHasSwiped(true);
+    }
+  }, [activeIndex]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasSwiped(true);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Pre-fetch inteligente das próximas imagens (UX fluida estilo Stories/TikTok)
   useEffect(() => {
@@ -101,7 +117,13 @@ export default function NewsSwiper({
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     touchCurrentY.current = e.touches[0].clientY;
-    let delta = touchCurrentY.current - touchStartY.current;
+    const rawDelta = touchCurrentY.current - touchStartY.current;
+
+    if (rawDelta < -10) {
+      setHasSwiped(true);
+    }
+
+    let delta = rawDelta;
 
     // Resistência suave nas bordas (efeito elástico)
     const atTop = activeIndexRef.current === 0;
@@ -197,6 +219,7 @@ export default function NewsSwiper({
     let lastWheelTime = 0;
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) < 30) return;
+      setHasSwiped(true);
       const now = Date.now();
       if (now - lastWheelTime < 480) return; // Debounce de transição
       lastWheelTime = now;
@@ -220,8 +243,14 @@ export default function NewsSwiper({
   // Navegação por teclado
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === 'PageDown') goToIndex(activeIndexRef.current + 1);
-      if (e.key === 'ArrowUp' || e.key === 'PageUp') goToIndex(activeIndexRef.current - 1);
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        setHasSwiped(true);
+        goToIndex(activeIndexRef.current + 1);
+      }
+      if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        setHasSwiped(true);
+        goToIndex(activeIndexRef.current - 1);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -242,7 +271,7 @@ export default function NewsSwiper({
   return (
     <div
       ref={viewportRef}
-      className="h-[100dvh] w-screen overflow-hidden touch-none select-none"
+      className="relative h-[100dvh] w-screen overflow-hidden touch-none select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -280,6 +309,24 @@ export default function NewsSwiper({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Indicador discreto de arrastar para cima ao abrir o app */}
+      <div
+        className={cn(
+          'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center transition-all duration-700 ease-out select-none',
+          hasSwiped || activeIndex > 0
+            ? 'opacity-0 translate-y-3 pointer-events-none'
+            : 'opacity-75'
+        )}
+        aria-hidden="true"
+      >
+        <div className="flex flex-col items-center animate-bounce">
+          <ChevronUp className="w-5 h-5 text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
+          <span className="text-[9px] font-body uppercase tracking-widest text-white/70 font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] -mt-1">
+            Deslize
+          </span>
+        </div>
       </div>
     </div>
   );
