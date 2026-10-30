@@ -314,19 +314,14 @@ export default function NewsSwiper({
       {/* Indicador discreto de arrastar para cima ao abrir o app */}
       <div
         className={cn(
-          'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center transition-all duration-700 ease-out select-none',
+          'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex items-center justify-center transition-all duration-700 ease-out select-none',
           hasSwiped || activeIndex > 0
             ? 'opacity-0 translate-y-3 pointer-events-none'
             : 'opacity-75'
         )}
         aria-hidden="true"
       >
-        <div className="flex flex-col items-center animate-bounce">
-          <ChevronUp className="w-5 h-5 text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
-          <span className="text-[9px] font-body uppercase tracking-widest text-white/70 font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] -mt-1">
-            Deslize
-          </span>
-        </div>
+        <ChevronUp className="w-6 h-6 text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] animate-bounce" />
       </div>
     </div>
   );
