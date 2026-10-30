@@ -1,4 +1,5 @@
 import type { NewsArticle } from '@/types';
+import { siteConfig } from '@/lib/seo-config';
 
 interface SharePayload {
   i?: string; // id
@@ -102,7 +103,7 @@ export function getShareUrl(article: Partial<NewsArticle>): string {
   const origin =
     typeof window !== 'undefined' && window.location.origin && !isLocalHost
       ? window.location.origin
-      : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flippy.news');
+      : siteConfig.url;
 
   // Link curto e elegante com o hash compacto de 8 caracteres do Flippy
   if (article.id && article.id !== '#' && !article.id.startsWith('divider')) {
@@ -111,4 +112,78 @@ export function getShareUrl(article: Partial<NewsArticle>): string {
 
   const slug = encodeShareSlug(article);
   return `${origin}/s/${slug}`;
+}
+
+export interface ShareNotifyOptions {
+  title: string;
+  description: string;
+  variant?: 'default' | 'destructive';
+}
+
+/**
+ * Compartilha o link direto da notícia com visualização rica (OpenGraph) para WhatsApp,
+ * Telegram, redes sociais e navegadores. Instantâneo (0ms de latência), preservando a User Activation.
+ */
+export async function shareArticle(
+  article: NewsArticle,
+  onNotify?: (options: ShareNotifyOptions) => void
+): Promise<boolean> {
+  const shareTitle = article.title;
+  const shareUrl = getShareUrl(article);
+  const shareText = `${article.title}\n\nLido no Flippy`;
+
+  // 1. Web Share API nativo (dispositivos móveis, iOS Safari, Android Chrome)
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    try {
+      await navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: shareUrl,
+      });
+      return true;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return true;
+      console.warn('Erro ao compartilhar via navigator.share:', err);
+    }
+  }
+
+  // 2. Fallback moderno: copiar link para a área de transferência
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      onNotify?.({
+        title: 'Link copiado!',
+        description: 'O link com preview da matéria foi copiado para a área de transferência.',
+      });
+      return true;
+    } catch (clipErr) {
+      console.warn('Erro ao copiar link:', clipErr);
+    }
+  }
+
+  // 3. Fallback legado (execCommand)
+  try {
+    const input = document.createElement('textarea');
+    input.value = shareUrl;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    onNotify?.({
+      title: 'Link copiado!',
+      description: 'O link com preview da matéria foi copiado para a área de transferência.',
+    });
+    return true;
+  } catch (legacyErr) {
+    console.error('Falha ao copiar link:', legacyErr);
+  }
+
+  onNotify?.({
+    title: 'Não foi possível compartilhar',
+    description: `Copie o link manualmente: ${shareUrl}`,
+    variant: 'destructive',
+  });
+  return false;
 }

@@ -36,10 +36,29 @@ declare global {
     lastRevalidationAt?: string;
   } | undefined;
   var __flippy_in_flight__: Map<string, Promise<CleanArticle[]>> | undefined;
+  var __flippy_article_history__: Map<string, CleanArticle> | undefined;
 }
 
 const cache = globalThis.__flippy_news_cache__ ?? new Map<string, CacheEntry>();
 globalThis.__flippy_news_cache__ = cache;
+
+const articleHistory = globalThis.__flippy_article_history__ ?? new Map<string, CleanArticle>();
+globalThis.__flippy_article_history__ = articleHistory;
+
+function rememberArticles(articles: CleanArticle[]) {
+  for (const a of articles) {
+    if (a.id) {
+      articleHistory.set(a.id, a);
+    }
+  }
+  if (articleHistory.size > 1000) {
+    const it = articleHistory.keys();
+    for (let i = 0; i < 200; i++) {
+      const nextKey = it.next().value;
+      if (nextKey) articleHistory.delete(nextKey);
+    }
+  }
+}
 
 const metrics = globalThis.__flippy_metrics__ ?? {
   totalRequests: 0,
@@ -154,6 +173,7 @@ export async function getFeedSWR(options?: {
       singleFlightAggregate(key, options)
         .then(freshArticles => {
           if (freshArticles.length > 0) {
+            rememberArticles(freshArticles);
             cache.set(key, {
               articles: freshArticles,
               timestamp: Date.now(),
@@ -176,6 +196,7 @@ export async function getFeedSWR(options?: {
     const fresh = await singleFlightAggregate(key, options);
     const snapshotVer = new Date().toISOString();
     if (fresh.length > 0) {
+      rememberArticles(fresh);
       const newEntry: CacheEntry = {
         articles: fresh,
         timestamp: now,
@@ -204,20 +225,27 @@ export async function getFeedSWR(options?: {
 export async function getArticleById(id: string): Promise<CleanArticle | null> {
   if (!id) return null;
 
-  // 1. Procurar em todos os caches ativos em memória
-  for (const entry of cache.values()) {
-    const found = entry.articles.find(a => a.id === id);
-    if (found) return found;
+  // 1. Procurar no histórico indexado
+  if (articleHistory.has(id)) {
+    return articleHistory.get(id)!;
   }
 
-  // 2. Se não estiver no cache imediato, dispara a busca do feed
+  // 2. Procurar em todos os caches ativos em memória
+  for (const entry of cache.values()) {
+    const found = entry.articles.find(a => a.id === id);
+    if (found) {
+      articleHistory.set(id, found);
+      return found;
+    }
+  }
+
+  // 3. Se não estiver no cache imediato, dispara a busca do feed
   try {
     const feed = await getFeedSWR();
-    for (const entry of cache.values()) {
-      const found = entry.articles.find(a => a.id === id);
-      if (found) return found;
+    for (const a of feed.articles) {
+      articleHistory.set(a.id, a);
     }
-    return feed.articles.find(a => a.id === id) || null;
+    return articleHistory.get(id) || null;
   } catch (err) {
     console.error('[engine] Erro ao buscar artigo por ID:', err);
     return null;

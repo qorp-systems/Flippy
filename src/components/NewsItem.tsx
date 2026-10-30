@@ -2,10 +2,9 @@
 
 import type { NewsArticle } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
+import { Send, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import FlippyLogo from '@/components/FlippyLogo';
-import { shareArticle, generateCardBlob } from '@/lib/share-snapshot';
+import { shareArticle } from '@/lib/share-link';
 import { useToast } from '@/hooks/use-toast';
 
 interface NewsItemProps {
@@ -18,47 +17,21 @@ interface NewsItemProps {
 export default function NewsItem({ article, isActive, onArticleClick }: NewsItemProps) {
   const [imageError, setImageError] = useState(false);
   const [useDirectImage, setUseDirectImage] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const cachedBlobRef = useRef<Blob | null>(null);
   const { toast } = useToast();
 
   // Reseta estado ao trocar de matéria
   useEffect(() => {
     setImageError(false);
     setUseDirectImage(false);
-    setImageLoaded(false);
     setIsSharing(false);
-    cachedBlobRef.current = null;
   }, [article.id]);
-
-  // Pré-renderiza a snapshot em background assim que a imagem correspondente ao post carregar
-  useEffect(() => {
-    if (!isActive || article.isDivider) return;
-
-    // Se o artigo possui imagem, aguarda o onLoad da imagem real antes de gerar o blob
-    const hasImagePending = Boolean(article.imageUrl && !imageError && !imageLoaded);
-    if (hasImagePending) return;
-
-    const timer = setTimeout(async () => {
-      if (!cardRef.current) return;
-      try {
-        const b = await generateCardBlob(cardRef.current);
-        cachedBlobRef.current = b;
-      } catch {
-        // silencioso
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [isActive, article.id, article.isDivider, imageLoaded, imageError]);
 
   const handleShare = async () => {
     if (isSharing) return;
     setIsSharing(true);
     try {
-      await shareArticle(cardRef.current, article, cachedBlobRef.current, (opts) => {
+      await shareArticle(article, (opts) => {
         toast({
           title: opts.title,
           description: opts.description,
@@ -68,7 +41,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
     } catch (error) {
       console.error('Erro ao acionar compartilhamento:', error);
     } finally {
-      setIsSharing(false);
+      setTimeout(() => setIsSharing(false), 300);
     }
   };
 
@@ -145,12 +118,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
   const currentImageSrc = useDirectImage ? article.imageUrl : proxiedImageUrl;
 
   return (
-    <div ref={cardRef} className="relative w-full h-full overflow-hidden bg-background">
-      {/* Top Branding Flippy no card (visível apenas na snapshot gerada) */}
-      <div data-snapshot-logo className="absolute top-4 left-4 z-10 select-none pointer-events-none hidden">
-        <FlippyLogo />
-      </div>
-
+    <div className="relative w-full h-full overflow-hidden bg-background">
       {/* Imagem Real de Alta Resolução ou Fallback Editorial Nativo (Sem placehold.co) */}
       {hasValidImage ? (
         <img
@@ -160,7 +128,6 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
           referrerPolicy="no-referrer"
           className="absolute inset-0 w-full h-full object-cover select-none"
           data-ai-hint={article.imageAiHint || 'news background'}
-          onLoad={() => setImageLoaded(true)}
           onError={() => {
             if (!useDirectImage && article.imageUrl) {
               setUseDirectImage(true);
@@ -268,7 +235,6 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
           </div>
 
           <Button
-            data-no-snapshot="true"
             onClick={(e) => {
               e.stopPropagation();
               handleShare();
@@ -279,17 +245,8 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
             className="font-body shrink-0 h-8 px-2.5 text-xs border-white/20 bg-black/40 hover:bg-black/60 text-white transition-all active:scale-95 shadow-md"
             aria-label="Compartilhar matéria"
           >
-            {isSharing ? (
-              <>
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                Gerando...
-              </>
-            ) : (
-              <>
-                <Send className="mr-1.5 h-3.5 w-3.5" />
-                Compartilhar
-              </>
-            )}
+            <Send className="mr-1.5 h-3.5 w-3.5" />
+            Compartilhar
           </Button>
         </div>
       </div>

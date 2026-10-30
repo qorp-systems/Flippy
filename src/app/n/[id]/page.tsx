@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { getArticleById } from '@/lib/news-engine/engine';
+import { siteConfig } from '@/lib/seo-config';
 import FlippyLogo from '@/components/FlippyLogo';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Compass, Newspaper } from 'lucide-react';
+import { ExternalLink, Compass, Newspaper, AlertCircle } from 'lucide-react';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -17,13 +17,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article) {
     return {
       title: 'Notícia | Flippy',
-      description: 'Leia as notícias mais recentes no Flippy.',
+      description: 'Leia as principais notícias no Flippy.',
+      openGraph: {
+        title: 'Flippy - Notícias Rápidas em Formato Visual',
+        description: 'Acompanhe as principais notícias em tempo real no Flippy.',
+        siteName: 'Flippy',
+        images: [`${siteConfig.url}/og-image.png`],
+      },
     };
   }
 
   const title = article.title;
   const description = article.summary || article.description || 'Leia no Flippy.';
-  const images = article.imageUrl ? [{ url: article.imageUrl, width: 1200, height: 630, alt: title }] : [];
+  const fallbackImage = `${siteConfig.url}/og-image.png`;
+  const imageUrl =
+    article.imageUrl && !article.imageUrl.includes('placehold.co')
+      ? article.imageUrl
+      : fallbackImage;
+
+  const images = [{ url: imageUrl, width: 1200, height: 630, alt: title }];
 
   return {
     title: `${title} | Flippy`,
@@ -34,13 +46,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: 'Flippy',
       locale: 'pt_BR',
       type: 'article',
+      url: `${siteConfig.url}/n/${id}`,
       images,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: article.imageUrl ? [article.imageUrl] : [],
+      images: [imageUrl],
     },
   };
 }
@@ -50,7 +63,35 @@ export default async function ShortArticlePage({ params }: Props) {
   const article = await getArticleById(id);
 
   if (!article) {
-    notFound();
+    return (
+      <main className="relative h-[100dvh] w-screen overflow-hidden bg-background text-foreground flex flex-col justify-between p-6">
+        <header className="relative z-10 flex justify-between items-center">
+          <Link href="/" className="inline-block transition-transform active:scale-95">
+            <FlippyLogo />
+          </Link>
+        </header>
+
+        <div className="relative z-10 max-w-md mx-auto text-center flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="font-headline text-2xl font-bold mb-2 text-white">
+            Notícia não encontrada
+          </h1>
+          <p className="font-body text-sm text-white/70 mb-6">
+            Esta matéria pode ter expirado ou o link está desatualizado. Acesse o Flippy para ver as novidades mais recentes.
+          </p>
+          <Link href="/">
+            <Button className="font-body font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg">
+              <Compass className="mr-2 h-4 w-4" />
+              Explorar notícias recentes
+            </Button>
+          </Link>
+        </div>
+
+        <div className="h-6" />
+      </main>
+    );
   }
 
   const brandColor = article.brandColor || article.source?.brandColor || '#29ABE2';
