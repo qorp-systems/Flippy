@@ -167,13 +167,13 @@ export default function FeedManager({
                 onClick={() => { onFilterChange('all'); onOpenChange(false); }}
                 className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
                   currentFilter === 'all'
-                    ? 'bg-primary/15 border-primary text-foreground'
-                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70'
+                    ? 'bg-white/15 border-white text-white shadow-sm'
+                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  {currentFilter === 'all' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  <Sparkles className={`w-4 h-4 ${currentFilter === 'all' ? 'text-white' : 'text-muted-foreground'}`} />
+                  {currentFilter === 'all' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
                 <span className="text-xs font-semibold">Em Destaque</span>
                 <span className="text-[10px] opacity-75">Todas as fontes e temas</span>
@@ -183,13 +183,13 @@ export default function FeedManager({
                 onClick={() => { onFilterChange('br'); onOpenChange(false); }}
                 className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
                   currentFilter === 'br'
-                    ? 'bg-primary/15 border-primary text-foreground'
-                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70'
+                    ? 'bg-white/15 border-white text-white shadow-sm'
+                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm">🇧🇷</span>
-                  {currentFilter === 'br' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  {currentFilter === 'br' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
                 <span className="text-xs font-semibold">Brasil</span>
                 <span className="text-[10px] opacity-75">Política, economia e fatos</span>
@@ -199,13 +199,13 @@ export default function FeedManager({
                 onClick={() => { onFilterChange('world'); onOpenChange(false); }}
                 className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
                   currentFilter === 'world'
-                    ? 'bg-primary/15 border-primary text-foreground'
-                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70'
+                    ? 'bg-white/15 border-white text-white shadow-sm'
+                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <Globe2 className="w-4 h-4 text-primary" />
-                  {currentFilter === 'world' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  <Globe2 className={`w-4 h-4 ${currentFilter === 'world' ? 'text-white' : 'text-muted-foreground'}`} />
+                  {currentFilter === 'world' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
                 <span className="text-xs font-semibold">Internacional</span>
                 <span className="text-[10px] opacity-75">Cobertura global e geopolítica</span>
@@ -215,13 +215,13 @@ export default function FeedManager({
                 onClick={() => { onFilterChange('tech'); onOpenChange(false); }}
                 className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${
                   currentFilter === 'tech'
-                    ? 'bg-primary/15 border-primary text-foreground'
-                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70'
+                    ? 'bg-white/15 border-white text-white shadow-sm'
+                    : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <Laptop className="w-4 h-4 text-primary" />
-                  {currentFilter === 'tech' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  <Laptop className={`w-4 h-4 ${currentFilter === 'tech' ? 'text-white' : 'text-muted-foreground'}`} />
+                  {currentFilter === 'tech' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
                 <span className="text-xs font-semibold">Tecnologia</span>
                 <span className="text-[10px] opacity-75">Inovação, IA e gadgets</span>
@@ -232,7 +232,7 @@ export default function FeedManager({
           {/* Descobrir Novo Feed */}
           <div className="space-y-2.5 p-4 bg-muted/20 border border-border/50 rounded-xl">
             <h3 className="font-headline text-sm font-semibold text-foreground/90 flex items-center gap-2">
-              <PlusCircle className="w-4 h-4 text-primary" />
+              <PlusCircle className="w-4 h-4 text-white" />
               Adicionar Novo Portal
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -251,7 +251,7 @@ export default function FeedManager({
                 onClick={handleDiscover}
                 disabled={isSearching || !searchQuery.trim()}
                 size="sm"
-                className="h-9 px-3 shrink-0"
+                className="h-9 px-3 shrink-0 bg-white text-black hover:bg-white/90"
               >
                 {isSearching ? <RotateCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </Button>
@@ -267,7 +267,7 @@ export default function FeedManager({
                       key={sug.query}
                       onClick={() => executeDiscover(sug.query)}
                       disabled={isSearching}
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-muted/50 hover:bg-primary/20 border border-border/60 hover:border-primary/40 text-foreground/90 transition-colors"
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-muted/50 hover:bg-white/15 border border-border/60 hover:border-white/40 text-foreground/90 transition-colors"
                     >
                       + {sug.name}
                     </button>
@@ -306,7 +306,7 @@ export default function FeedManager({
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: f.brandColor || '#29ABE2' }}
+                      style={{ backgroundColor: f.brandColor || '#ffffff' }}
                     />
                     <div className="overflow-hidden">
                       <p className="text-xs font-semibold text-foreground truncate">{f.name}</p>
@@ -320,7 +320,7 @@ export default function FeedManager({
                       className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                       title={f.isHidden ? 'Ativar fonte' : 'Desativar fonte'}
                     >
-                      {f.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-primary" />}
+                      {f.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-white" />}
                     </button>
                     <button
                       onClick={() => handleRemoveFeed(f.id)}

@@ -94,7 +94,7 @@ export default async function ShortArticlePage({ params }: Props) {
     );
   }
 
-  const brandColor = article.brandColor || article.source?.brandColor || '#29ABE2';
+  const brandColor = article.brandColor || article.source?.brandColor || '#333333';
   const hasImage = Boolean(article.imageUrl && !article.imageUrl.includes('placehold.co'));
   const sourceName = article.sourceName || article.source?.name || 'Flippy';
 

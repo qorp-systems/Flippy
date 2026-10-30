@@ -53,7 +53,7 @@ export default async function SharedArticlePage({ params }: Props) {
     notFound();
   }
 
-  const brandColor = article.brandColor || '#29ABE2';
+  const brandColor = article.brandColor || '#333333';
   const hasImage = Boolean(article.imageUrl && !article.imageUrl.includes('placehold.co'));
 
   return (

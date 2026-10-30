@@ -77,7 +77,7 @@ export function decodeShareSlug(slug: string): Partial<NewsArticle> | null {
       imageUrl: data.m || '',
       sourceName: data.s || 'Flippy',
       originalUrl: data.u || '#',
-      brandColor: data.c || '#29ABE2',
+      brandColor: data.c || '#333333',
     };
   } catch (err) {
     console.error('Falha ao decodificar slug de compartilhamento:', err);

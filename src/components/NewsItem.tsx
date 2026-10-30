@@ -71,7 +71,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
 
   const displayText = article.summary || article.description || '';
   const isAi = !!article.isAiSummary;
-  const brandColor = article.brandColor || article.source?.brandColor || '#29ABE2';
+  const brandColor = article.brandColor || article.source?.brandColor || '#333333';
 
   const lastOpenTimeRef = useRef(0);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);

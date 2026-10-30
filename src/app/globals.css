@@ -18,8 +18,8 @@ body {
     --popover: 0 0% 10%; /* #1A1A1A */
     --popover-foreground: 0 0% 95%; /* #F2F2F2 */
 
-    --primary: 197 78% 52%; /* #29ABE2 */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary: 0 0% 100%; /* #FFFFFF */
+    --primary-foreground: 0 0% 7%; /* #121212 */
 
     --secondary: 0 0% 20%; /* #333333 */
     --secondary-foreground: 0 0% 90%; /* #E6E6E6 */
@@ -27,7 +27,7 @@ body {
     --muted: 0 0% 25%; /* #404040 */
     --muted-foreground: 0 0% 60%; /* #999999 */
 
-    --accent: 197 78% 52%; /* #29ABE2 */
+    --accent: 0 0% 20%; /* #333333 */
     --accent-foreground: 0 0% 100%; /* #FFFFFF */
 
     --destructive: 0 84.2% 60.2%; /* Default ShadCN destructive red */
@@ -35,26 +35,26 @@ body {
     
     --border: 0 0% 20%; /* #333333 */
     --input: 0 0% 15%; /* #262626 */
-    --ring: 197 78% 52%; /* #29ABE2 */
+    --ring: 0 0% 100%; /* #FFFFFF */
 
     --radius: 0.5rem;
 
     /* Chart colors (can be adjusted if charts are used) */
-    --chart-1: 197 78% 52%;
-    --chart-2: 220 70% 50%;
-    --chart-3: 160 60% 45%;
-    --chart-4: 30 80% 55%;
-    --chart-5: 280 65% 60%;
+    --chart-1: 0 0% 100%;
+    --chart-2: 0 0% 80%;
+    --chart-3: 0 0% 60%;
+    --chart-4: 0 0% 40%;
+    --chart-5: 0 0% 20%;
 
     /* Sidebar specific colors adapted to the dark theme */
     --sidebar-background: 0 0% 10%; /* #1A1A1A */
     --sidebar-foreground: 0 0% 95%; /* #F2F2F2 */
-    --sidebar-primary: 197 78% 52%; /* #29ABE2 */
-    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-primary: 0 0% 100%; /* #FFFFFF */
+    --sidebar-primary-foreground: 0 0% 7%; /* #121212 */
     --sidebar-accent: 0 0% 15%; /* #262626 */
     --sidebar-accent-foreground: 0 0% 95%; /* #F2F2F2 */
     --sidebar-border: 0 0% 20%; /* #333333 */
-    --sidebar-ring: 197 78% 52%; /* #29ABE2 */
+    --sidebar-ring: 0 0% 100%; /* #FFFFFF */
   }
 
   .dark {
@@ -65,28 +65,28 @@ body {
     --card-foreground: 0 0% 95%;
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 95%;
-    --primary: 197 78% 52%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 7%;
     --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 90%;
     --muted: 0 0% 25%;
     --muted-foreground: 0 0% 60%;
-    --accent: 197 78% 52%;
+    --accent: 0 0% 20%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 20%;
     --input: 0 0% 15%;
-    --ring: 197 78% 52%;
+    --ring: 0 0% 100%;
     
     --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 197 78% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 7%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 197 78% 52%;
+    --sidebar-ring: 0 0% 100%;
   }
 }
 

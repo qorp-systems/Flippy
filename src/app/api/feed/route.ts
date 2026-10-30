@@ -14,7 +14,7 @@ function parseSources(rawSources: any): FeedSourceConfig[] | undefined {
       url: String(s.url),
       category: s.category || 'general',
       region: s.region || 'br',
-      brandColor: s.brandColor || '#29ABE2',
+      brandColor: s.brandColor || '#333333',
       enabled: true,
     }));
 }
