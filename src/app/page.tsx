@@ -10,8 +10,10 @@ import { Settings } from 'lucide-react';
 import type { NewsArticle, FeedSource } from '@/types';
 import { DEFAULT_FEEDS } from '@/types';
 import useLocalStorage from '@/hooks/useLocalStorage';
+import { useI18n } from '@/lib/i18n';
 
 export default function Home() {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [isFeedManagerOpen, setIsFeedManagerOpen] = useState(false);
   const [sessionArticles, setSessionArticles] = useState<NewsArticle[]>([]);
@@ -60,7 +62,7 @@ export default function Home() {
       const rawArticles: NewsArticle[] = data.articles || [];
 
       if (rawArticles.length === 0) {
-        setError('Nenhuma notícia recente encontrada no momento.');
+        setError(t('errorEmpty'));
         setSessionArticles([]);
         setHasMore(false);
         return;
@@ -79,8 +81,8 @@ export default function Home() {
         if (unreadPrevious.length > 0) {
           const dividerCard: NewsArticle = {
             id: 'divider-previous-news',
-            title: 'Você está em dia com as novidades de hoje! 🎉',
-            description: 'Deslize para ver as notícias de ontem e dias anteriores que você ainda não conferiu.',
+            title: t('dividerTodayDoneTitle'),
+            description: t('dividerTodayDoneDesc'),
             imageUrl: '',
             originalUrl: '#',
             isDivider: true,
@@ -92,8 +94,8 @@ export default function Home() {
       } else if (unreadPrevious.length > 0) {
         const dividerCard: NewsArticle = {
           id: 'divider-starting-previous',
-          title: 'Tudo lido de hoje! 🌅',
-          description: 'Você já conferiu todas as notícias de hoje. Continuando com as matérias de ontem e anteriores...',
+          title: t('dividerAllTodayReadTitle'),
+          description: t('dividerAllTodayReadDesc'),
           imageUrl: '',
           originalUrl: '#',
           isDivider: true,
@@ -107,7 +109,7 @@ export default function Home() {
       setHasMore(data.hasMore ?? true);
     } catch (e: any) {
       console.error('[loadFeed] erro:', e);
-      setError('Não foi possível conectar às fontes de notícias. Verifique sua conexão.');
+      setError(t('searchServiceError'));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -196,7 +198,7 @@ export default function Home() {
           className="text-white hover:bg-white/10 rounded-full h-10 w-10 backdrop-blur-md bg-black/30 border border-white/10 pointer-events-auto transition-transform active:scale-95 shadow-md"
         >
           <Settings className="h-5 w-5" />
-          <span className="sr-only">Configurações e Feeds</span>
+          <span className="sr-only">{t('settingsTitle')}</span>
         </Button>
       </header>
 
@@ -221,10 +223,10 @@ export default function Home() {
       {!isLoading && error && (
         <div className="flex items-center justify-center h-[100dvh] w-screen bg-background text-foreground p-4 text-center">
           <div className="bg-card/90 backdrop-blur-md p-6 rounded-2xl border border-border max-w-sm shadow-xl">
-            <p className="font-headline text-lg font-bold text-destructive mb-2">Erro ao carregar notícias</p>
+            <p className="font-headline text-lg font-bold text-destructive mb-2">{t('errorTitle')}</p>
             <p className="text-sm text-muted-foreground mb-4">{error}</p>
             <Button onClick={() => loadFeed(filter)} className="w-full">
-              Tentar Novamente
+              {t('retry')}
             </Button>
           </div>
         </div>

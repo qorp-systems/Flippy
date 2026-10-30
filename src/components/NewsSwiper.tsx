@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ChevronUp } from 'lucide-react';
 import { usePreferences } from '@/hooks/usePreferences';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 const SWIPE_THRESHOLD = 0.12;    // 12% da altura da tela (super responsivo)
 const VELOCITY_THRESHOLD = 0.18; // px/ms — flick leve já passa de notícia
@@ -48,6 +49,7 @@ export default function NewsSwiper({
   const activatedAt = useRef(Date.now());
   const prevIndexRef = useRef(0);
   const { trackDwell, trackClick } = usePreferences();
+  const { t } = useI18n();
 
   // Esconde o indicador ao avançar de slide ou após 6 segundos
   useEffect(() => {
@@ -260,9 +262,9 @@ export default function NewsSwiper({
     return (
       <div className="flex items-center justify-center h-[100dvh] w-screen bg-background text-foreground p-4 text-center">
         <div className="bg-card p-6 rounded-lg shadow-xl">
-          <p className="font-headline text-xl mb-2">Nenhuma Notícia no Feed</p>
-          <p className="text-muted-foreground">O feed selecionado está vazio ou não retornou notícias.</p>
-          <Button onClick={onOpenFeedManager} className="mt-4">Gerenciar Feeds</Button>
+          <p className="font-headline text-xl mb-2">{t('noNewsTitle')}</p>
+          <p className="text-muted-foreground">{t('noNewsDesc')}</p>
+          <Button onClick={onOpenFeedManager} className="mt-4">{t('manageFeeds')}</Button>
         </div>
       </div>
     );
@@ -305,7 +307,7 @@ export default function NewsSwiper({
           <div className="h-[100dvh] w-screen flex-shrink-0 flex items-center justify-center bg-background">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-sm">Carregando mais notícias...</p>
+              <p className="text-sm">{t('loadingMore')}</p>
             </div>
           </div>
         )}

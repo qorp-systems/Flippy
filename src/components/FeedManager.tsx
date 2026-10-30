@@ -8,8 +8,9 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import type { FeedSource } from '@/types';
-import { Trash2, Search, RotateCw, Eye, EyeOff, Globe2, Sparkles, Laptop, PlusCircle, Check } from 'lucide-react';
+import { Trash2, Search, RotateCw, Eye, EyeOff, Globe2, Sparkles, Laptop, PlusCircle, Check, Languages } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useI18n, type LanguageSetting } from '@/lib/i18n';
 
 export type FeedFilter = 'all' | 'br' | 'world' | 'tech';
 
@@ -52,13 +53,14 @@ export default function FeedManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
+  const { t, lang, setting, setLanguageSetting } = useI18n();
 
   const handleToggleVisibility = (id: string) => {
     const updated = feedSources.map(f => f.id === id ? { ...f, isHidden: !f.isHidden } : f);
     onFeedSourcesChange(updated);
     const feed = updated.find(f => f.id === id);
     toast({
-      title: feed?.isHidden ? 'Fonte desativada' : 'Fonte ativada',
+      title: feed?.isHidden ? t('sourceDisabled') : t('sourceEnabled'),
       description: feed?.name,
     });
     // Atualiza o feed com as fontes ativas
@@ -67,7 +69,7 @@ export default function FeedManager({
 
   const handleRemoveFeed = (id: string) => {
     onFeedSourcesChange(feedSources.filter(f => f.id !== id));
-    toast({ title: 'Fonte removida da lista.' });
+    toast({ title: t('sourceRemoved') });
     onRefresh();
   };
 
@@ -95,8 +97,8 @@ export default function FeedManager({
 
         if (exists) {
           toast({
-            title: 'Fonte já existente',
-            description: `"${discovered.name}" já está na sua lista de fontes.`,
+            title: t('sourceExists'),
+            description: t('sourceExistsDesc', { name: discovered.name }),
           });
         } else {
           const newFeed: FeedSource = {
@@ -111,23 +113,22 @@ export default function FeedManager({
 
           onFeedSourcesChange([...feedSources, newFeed]);
           toast({
-            title: 'Portal adicionado com sucesso! 🎉',
-            description: `"${discovered.name}" já está integrado ao seu feed.`,
+            title: discovered.name,
+            description: t('sourceEnabled'),
           });
           setSearchQuery('');
           onRefresh();
         }
       } else {
         toast({
-          title: 'Não encontramos o feed',
-          description: data?.error || 'Verifique se o site possui RSS ou tente digitar o link direto.',
+          title: t('searchServiceError'),
+          description: data?.error || '',
           variant: 'destructive',
         });
       }
     } catch {
       toast({
-        title: 'Erro de conexão',
-        description: 'Não foi possível contatar o serviço de busca. Tente novamente.',
+        title: t('searchServiceError'),
         variant: 'destructive',
       });
     } finally {
@@ -149,18 +150,52 @@ export default function FeedManager({
       <SheetContent className="bg-card text-card-foreground w-full sm:max-w-md flex flex-col p-0 border-l border-border/40">
         <SheetHeader className="p-6 border-b border-border/40">
           <SheetTitle className="font-headline text-2xl font-bold flex items-center justify-between">
-            Preferências & Feeds
+            {t('preferencesAndFeeds')}
           </SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
-            Alterne o modo de leitura e gerencie suas fontes de notícias.
+            {t('preferencesDesc')}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-grow p-6 space-y-6 overflow-y-auto no-scrollbar">
+          {/* Seletor de Idioma da Interface (Detecção Automática ou Manual) */}
+          <div className="space-y-2.5 p-3.5 bg-muted/20 border border-border/50 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Languages className="w-4 h-4 text-white" />
+                <span className="text-xs font-semibold text-foreground/90">{t('interfaceLanguage')}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                {setting === 'auto' ? `${t('autoSystemLanguage')} (${lang.toUpperCase()})` : lang.toUpperCase()}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-1.5 pt-1">
+              {[
+                { id: 'auto', label: 'Auto' },
+                { id: 'pt', label: 'PT' },
+                { id: 'en', label: 'EN' },
+                { id: 'es', label: 'ES' },
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => setLanguageSetting(opt.id as LanguageSetting)}
+                  className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all ${
+                    setting === opt.id
+                      ? 'bg-white text-black border-white shadow-sm font-semibold'
+                      : 'bg-muted/40 border-border/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Seletor de Tópico / Região */}
           <div className="space-y-3">
             <h3 className="font-headline text-sm font-semibold text-foreground/90 uppercase tracking-wider">
-              Foco do Feed
+              {t('feedFocus')}
             </h3>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -175,8 +210,8 @@ export default function FeedManager({
                   <Sparkles className={`w-4 h-4 ${currentFilter === 'all' ? 'text-white' : 'text-muted-foreground'}`} />
                   {currentFilter === 'all' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
-                <span className="text-xs font-semibold">Em Destaque</span>
-                <span className="text-[10px] opacity-75">Todas as fontes e temas</span>
+                <span className="text-xs font-semibold">{t('featured')}</span>
+                <span className="text-[10px] opacity-75">{t('featuredDesc')}</span>
               </button>
 
               <button
@@ -191,8 +226,8 @@ export default function FeedManager({
                   <span className="text-sm">🇧🇷</span>
                   {currentFilter === 'br' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
-                <span className="text-xs font-semibold">Brasil</span>
-                <span className="text-[10px] opacity-75">Política, economia e fatos</span>
+                <span className="text-xs font-semibold">{t('brazil')}</span>
+                <span className="text-[10px] opacity-75">{t('brazilDesc')}</span>
               </button>
 
               <button
@@ -207,8 +242,8 @@ export default function FeedManager({
                   <Globe2 className={`w-4 h-4 ${currentFilter === 'world' ? 'text-white' : 'text-muted-foreground'}`} />
                   {currentFilter === 'world' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
-                <span className="text-xs font-semibold">Internacional</span>
-                <span className="text-[10px] opacity-75">Cobertura global e geopolítica</span>
+                <span className="text-xs font-semibold">{t('world')}</span>
+                <span className="text-[10px] opacity-75">{t('worldDesc')}</span>
               </button>
 
               <button
@@ -223,8 +258,8 @@ export default function FeedManager({
                   <Laptop className={`w-4 h-4 ${currentFilter === 'tech' ? 'text-white' : 'text-muted-foreground'}`} />
                   {currentFilter === 'tech' && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
-                <span className="text-xs font-semibold">Tecnologia</span>
-                <span className="text-[10px] opacity-75">Inovação, IA e gadgets</span>
+                <span className="text-xs font-semibold">{t('tech')}</span>
+                <span className="text-[10px] opacity-75">{t('techDesc')}</span>
               </button>
             </div>
           </div>
@@ -233,14 +268,14 @@ export default function FeedManager({
           <div className="space-y-2.5 p-4 bg-muted/20 border border-border/50 rounded-xl">
             <h3 className="font-headline text-sm font-semibold text-foreground/90 flex items-center gap-2">
               <PlusCircle className="w-4 h-4 text-white" />
-              Adicionar Novo Portal
+              {t('addPortal')}
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Digite o nome do portal (ex: <code>TecMundo</code>, <code>Canaltech</code>), o domínio ou link RSS direto. O sistema descobre sozinho.
+              {t('addPortalDesc')}
             </p>
             <div className="flex gap-2">
               <Input
-                placeholder="ex: tecmundo, folha.uol.com.br ou link direto"
+                placeholder={t('addPortalPlaceholder')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleDiscover(); }}
@@ -260,7 +295,7 @@ export default function FeedManager({
             {/* Chips de Sugestões Rápidas */}
             {availableSuggestions.length > 0 && (
               <div className="pt-1.5">
-                <p className="text-[11px] text-muted-foreground/80 mb-1.5">Sugestões populares:</p>
+                <p className="text-[11px] text-muted-foreground/80 mb-1.5">{t('popularSuggestions')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {availableSuggestions.slice(0, 4).map(sug => (
                     <button
@@ -281,17 +316,17 @@ export default function FeedManager({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-headline text-sm font-semibold text-foreground/90 uppercase tracking-wider">
-                Fontes Cadastradas ({feedSources.filter(f => !f.isHidden).length})
+                {t('registeredSources')} ({feedSources.filter(f => !f.isHidden).length})
               </h3>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { onRefresh(); toast({ title: 'Atualizando feed...' }); }}
+                onClick={() => { onRefresh(); toast({ title: t('reloadingFeed') }); }}
                 disabled={isRefreshing}
                 className="h-7 text-xs text-muted-foreground hover:text-foreground"
               >
                 <RotateCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Recarregar
+                {t('reload')}
               </Button>
             </div>
 
@@ -318,14 +353,14 @@ export default function FeedManager({
                     <button
                       onClick={() => handleToggleVisibility(f.id)}
                       className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title={f.isHidden ? 'Ativar fonte' : 'Desativar fonte'}
+                      title={f.isHidden ? t('activateSource') : t('deactivateSource')}
                     >
                       {f.isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-white" />}
                     </button>
                     <button
                       onClick={() => handleRemoveFeed(f.id)}
                       className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                      title="Remover fonte"
+                      title={t('removeSource')}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -338,8 +373,8 @@ export default function FeedManager({
           {/* Histórico de Notícias Lidas */}
           <div className="pt-3 border-t border-border/40 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-foreground">Histórico de Leitura</p>
-              <p className="text-[11px] text-muted-foreground">{seenCount} notícias marcadas como vistas</p>
+              <p className="text-xs font-semibold text-foreground">{t('readingHistory')}</p>
+              <p className="text-[11px] text-muted-foreground">{t('markedAsRead', { count: seenCount })}</p>
             </div>
             {seenCount > 0 && (
               <Button
@@ -347,11 +382,11 @@ export default function FeedManager({
                 size="sm"
                 onClick={() => {
                   onClearHistory?.();
-                  toast({ title: 'Histórico redefinido!', description: 'Todas as notícias voltarão a aparecer.' });
+                  toast({ title: t('historyResetTitle'), description: t('historyResetDesc') });
                 }}
                 className="text-xs h-7 px-2.5 border-border/60"
               >
-                Limpar
+                {t('clearHistory')}
               </Button>
             )}
           </div>

@@ -6,6 +6,7 @@ import { Send, ChevronDown, CheckCircle2, Newspaper } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { shareArticle } from '@/lib/share-link';
 import { useToast } from '@/hooks/use-toast';
+import { useI18n } from '@/lib/i18n';
 
 interface NewsItemProps {
   article: NewsArticle;
@@ -19,6 +20,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
   const [useDirectImage, setUseDirectImage] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const { toast } = useToast();
+  const { t } = useI18n();
 
   // Reseta estado ao trocar de matéria
   useEffect(() => {
@@ -31,13 +33,17 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
     if (isSharing) return;
     setIsSharing(true);
     try {
-      await shareArticle(article, (opts) => {
-        toast({
-          title: opts.title,
-          description: opts.description,
-          variant: opts.variant,
-        });
-      });
+      await shareArticle(
+        article,
+        (opts) => {
+          toast({
+            title: opts.title,
+            description: opts.description,
+            variant: opts.variant,
+          });
+        },
+        t('readOnFlippy')
+      );
     } catch (error) {
       console.error('Erro ao acionar compartilhamento:', error);
     } finally {
@@ -62,7 +68,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
         </p>
 
         <div className="flex flex-col items-center gap-2 animate-bounce opacity-80">
-          <span className="text-xs text-white/60 font-body">Deslize para continuar</span>
+          <span className="text-xs text-white/60 font-body">{t('swipeToContinue')}</span>
           <ChevronDown className="w-5 h-5 text-primary" />
         </div>
       </div>
@@ -191,7 +197,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
               className="font-body text-sm sm:text-base md:text-lg text-white/90 whitespace-pre-line leading-relaxed line-clamp-5"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}
             >
-              {displayText || 'Conteúdo não disponível.'}
+              {displayText || t('noContentAvailable')}
             </p>
           </div>
         </div>
@@ -212,7 +218,7 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
 
               {article.dayBucket && article.dayBucket !== 'today' && (
                 <span className="font-body text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded bg-white/20 text-white/90 backdrop-blur-sm whitespace-nowrap shrink-0">
-                  {article.dayBucket === 'yesterday' ? 'Ontem' : 'Anterior'}
+                  {article.dayBucket === 'yesterday' ? t('yesterday') : t('earlier')}
                 </span>
               )}
 
@@ -225,12 +231,12 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
 
             {article.relatedSources && article.relatedSources.length > 0 && (
               <p className="text-[11px] text-white/60 truncate">
-                Também coberto por: {article.relatedSources.map(s => s.name).join(', ')}
+                {t('alsoCoveredBy')}{article.relatedSources.map(s => s.name).join(', ')}
               </p>
             )}
 
             {isAi && (
-              <p className="text-xs text-muted-foreground italic mb-0.5">Resumido por IA</p>
+              <p className="text-xs text-muted-foreground italic mb-0.5">{t('summarizedByAi')}</p>
             )}
           </div>
 
@@ -243,10 +249,10 @@ export default function NewsItem({ article, isActive, onArticleClick }: NewsItem
             variant="outline"
             size="sm"
             className="font-body shrink-0 h-8 px-2.5 text-xs border-white/20 bg-black/40 hover:bg-black/60 text-white transition-all active:scale-95 shadow-md"
-            aria-label="Compartilhar matéria"
+            aria-label={t('share')}
           >
             <Send className="mr-1.5 h-3.5 w-3.5" />
-            Compartilhar
+            {t('share')}
           </Button>
         </div>
       </div>

@@ -126,11 +126,12 @@ export interface ShareNotifyOptions {
  */
 export async function shareArticle(
   article: NewsArticle,
-  onNotify?: (options: ShareNotifyOptions) => void
+  onNotify?: (options: ShareNotifyOptions) => void,
+  shareSuffix: string = 'Lido no Flippy'
 ): Promise<boolean> {
   const shareTitle = article.title;
   const shareUrl = getShareUrl(article);
-  const shareText = `${article.title}\n\nLido no Flippy`;
+  const shareText = `${article.title}\n\n${shareSuffix}`;
 
   // 1. Web Share API nativo (dispositivos móveis, iOS Safari, Android Chrome)
   if (typeof navigator !== 'undefined' && navigator.share) {

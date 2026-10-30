@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Analytics } from '@vercel/analytics/next';
 import { siteConfig } from '@/lib/seo-config';
+import { LanguageProvider } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -139,8 +140,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased h-full bg-background text-foreground">
-        {children}
-        <Toaster />
+        <LanguageProvider>
+          {children}
+          <Toaster />
+        </LanguageProvider>
         <Analytics />
       </body>
     </html>
